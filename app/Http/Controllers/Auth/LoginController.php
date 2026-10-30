@@ -27,7 +27,7 @@ class LoginController extends Controller
         ]);
 
         try {
-            $user = User::where('user_mail', $validated['email'])->first();
+            $user = User::where('email', $validated['email'])->first();
 
             if (! $user || ! Hash::check($validated['password'], $user->password)) {
                 Log::warning('Login failed: invalid credentials', [

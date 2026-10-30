@@ -1,5 +1,8 @@
+import axios from "axios";
 import { cn } from "cn";
+import { router } from "@inertiajs/react";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +19,8 @@ import {
     FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import api from "@/lib/api";
 import { LoginFormData } from "@/types";
-import { toast } from "sonner";
 
 export function LoginForm({
     className,
@@ -26,26 +29,42 @@ export function LoginForm({
     const {
         register,
         handleSubmit,
-        formState: { errors },
+        setError,
+        formState: { errors, isSubmitting },
     } = useForm<LoginFormData>();
 
     const formSubmit: SubmitHandler<LoginFormData> = async (data) => {
         try {
-            await addExpense(data);
-            toast.add({ title: "Expense Added" });
+            const res = await api.post("/login", data);
+            toast.success(res.data.message ?? "Logged in");
+            router.visit(res.data.redirect ?? "/dashboard");
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                console.error(
-                    JSON.stringify(error.response?.data?.detail, null, 2),
-                );
-            } else {
-                console.error(error);
+                const status = error.response?.status;
+                const body = error.response?.data;
+
+                // Laravel validation errors
+                if (status === 422 && body?.errors) {
+                    Object.entries(body.errors).forEach(([field, msgs]) => {
+                        setError(field as keyof LoginFormData, {
+                            message: (msgs as string[])[0],
+                        });
+                    });
+                    return;
+                }
+
+                // Wrong email/password, or server error
+                setError("root", {
+                    message: body?.message ?? "Login failed. Please try again.",
+                });
+                toast.error(body?.message ?? "Login failed");
+                return;
             }
-            toast.add({
-                title: "Failed to add Expense",
+
+            console.error(error);
+            toast.error("Something went wrong", {
                 description: "Please try again.",
             });
-        } finally {
         }
     };
 
@@ -59,7 +78,7 @@ export function LoginForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit(formSubmit)}>
+                    <form onSubmit={handleSubmit(formSubmit)} noValidate>
                         <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -81,6 +100,7 @@ export function LoginForm({
                                     {errors.email.message}
                                 </FieldDescription>
                             )}
+
                             <Field>
                                 <div className="flex items-center">
                                     <FieldLabel htmlFor="password">
@@ -100,8 +120,17 @@ export function LoginForm({
                                     {errors.password.message}
                                 </FieldDescription>
                             )}
+
+                            {errors.root && (
+                                <FieldDescription className="text-red-500 font-medium">
+                                    {errors.root.message}
+                                </FieldDescription>
+                            )}
+
                             <Field>
-                                <Button type="submit">Login</Button>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting ? "Logging in..." : "Login"}
+                                </Button>
                             </Field>
                         </FieldGroup>
                     </form>
