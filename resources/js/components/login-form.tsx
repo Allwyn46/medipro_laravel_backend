@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LoginFormData } from "@/types";
+import { toast } from "sonner";
 
 export function LoginForm({
     className,
@@ -28,8 +29,24 @@ export function LoginForm({
         formState: { errors },
     } = useForm<LoginFormData>();
 
-    const onSubmit: SubmitHandler<LoginFormData> = (data) => {
-        console.log(data);
+    const formSubmit: SubmitHandler<LoginFormData> = async (data) => {
+        try {
+            await addExpense(data);
+            toast.add({ title: "Expense Added" });
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                console.error(
+                    JSON.stringify(error.response?.data?.detail, null, 2),
+                );
+            } else {
+                console.error(error);
+            }
+            toast.add({
+                title: "Failed to add Expense",
+                description: "Please try again.",
+            });
+        } finally {
+        }
     };
 
     return (
@@ -42,7 +59,7 @@ export function LoginForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit(onSubmit)}>
+                    <form onSubmit={handleSubmit(formSubmit)}>
                         <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor="email">Email</FieldLabel>

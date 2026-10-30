@@ -9,58 +9,75 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Inertia\Response;
 
 class LoginController extends Controller
 {
-    public function showLoginForm()
+    public function showLoginForm(): Response
     {
-        try {
-            return inertia('Auth/Login');
-        } catch (\Exception $e) {
-            // return response()->json(['error' => 'An error occurred while showing the login form.'], 500);
-            return inertia('ErrorPages/wentWrong', ['message' => 'An error occurred while showing the login form.']);
-        }
+        return inertia('Auth/Login');
     }
 
     public function login(Request $request): JsonResponse
     {
+        // Validation failures automatically return 422 JSON for Axios requests
         $validated = $request->validate([
-            'email' => ['required', 'string'],
+            'email'    => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
         try {
             $user = User::where('user_mail', $validated['email'])->first();
 
-            if (!$user || !Hash::check($validated['password'], $user->password)) {
+            if (! $user || ! Hash::check($validated['password'], $user->password)) {
                 Log::warning('Login failed: invalid credentials', [
                     'email' => $validated['email'],
+                    'ip'    => $request->ip(),
                 ]);
 
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'Invalid Credentials',
+                    'message' => 'Invalid credentials',
                 ], 401);
             }
 
             Auth::login($user);
             $request->session()->regenerate();
 
-            return inertia('dashboard', ['message' => 'User login successfully']);
-            
+            return response()->json([
+                'status'   => 'success',
+                'message'  => 'User logged in successfully',
+                'redirect' => route('dashboard'),
+            ]);
         } catch (\Throwable $e) {
             Log::error('Login error: ' . $e->getMessage());
 
-            return inertia('ErrorPages/wentWrong', ['message' => 'An error occurred while showing the login form.']);
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Something went wrong. Please try again.',
+            ], 500);
         }
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): JsonResponse
     {
         try {
-            // Logout logic here
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'An error occurred while logging out.'], 500);
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'status'   => 'success',
+                'message'  => 'Logged out successfully',
+                'redirect' => route('login'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Logout error: ' . $e->getMessage());
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'An error occurred while logging out.',
+            ], 500);
         }
     }
 }
