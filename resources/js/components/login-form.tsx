@@ -1,4 +1,5 @@
 import { cn } from "cn";
+import { SubmitHandler, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +16,22 @@ import {
     FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { LoginFormData } from "@/types";
 
 export function LoginForm({
     className,
     ...props
 }: React.ComponentProps<"div">) {
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+    } = useForm<LoginFormData>();
+
+    const onSubmit: SubmitHandler<LoginFormData> = (data) => {
+        console.log(data);
+    };
+
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <Card>
@@ -30,7 +42,7 @@ export function LoginForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form>
+                    <form onSubmit={handleSubmit(onSubmit)}>
                         <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -38,17 +50,39 @@ export function LoginForm({
                                     id="email"
                                     type="email"
                                     placeholder="m@example.com"
-                                    required
+                                    {...register("email", {
+                                        required: "Email is required",
+                                        pattern: {
+                                            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                                            message: "Invalid email address",
+                                        },
+                                    })}
                                 />
                             </Field>
+                            {errors.email && (
+                                <FieldDescription className="text-red-500 font-medium">
+                                    {errors.email.message}
+                                </FieldDescription>
+                            )}
                             <Field>
                                 <div className="flex items-center">
                                     <FieldLabel htmlFor="password">
                                         Password
                                     </FieldLabel>
                                 </div>
-                                <Input id="password" type="password" required />
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    {...register("password", {
+                                        required: "Password is required",
+                                    })}
+                                />
                             </Field>
+                            {errors.password && (
+                                <FieldDescription className="text-red-500 font-medium">
+                                    {errors.password.message}
+                                </FieldDescription>
+                            )}
                             <Field>
                                 <Button type="submit">Login</Button>
                             </Field>

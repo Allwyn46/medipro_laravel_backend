@@ -12,3 +12,8 @@ export type User = {
 export type Auth = {
     user: User;
 };
+
+export type LoginFormData = {
+    email: string;
+    password: string;
+};
