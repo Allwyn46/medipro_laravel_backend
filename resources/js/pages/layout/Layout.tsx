@@ -1,11 +1,14 @@
 import { AppSidebar } from "@/components/app-sidebar";
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
-import { DataTable } from "@/components/data-table";
-import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({
+    children,
+    title,
+}: {
+    children: React.ReactNode;
+    title?: string;
+}) {
     return (
         <SidebarProvider
             style={
@@ -17,7 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         >
             <AppSidebar variant="inset" />
             <SidebarInset>
-                <SiteHeader />
+                <SiteHeader title={title} />
                 {children}
             </SidebarInset>
         </SidebarProvider>
