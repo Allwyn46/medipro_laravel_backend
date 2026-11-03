@@ -23,48 +23,16 @@ export interface MetricCardItem {
     footerSubtext: string;
 }
 
-const DEFAULT_CLINIC_CARDS: MetricCardItem[] = [
-    {
-        title: "Total Clinic Revenue",
-        value: "$48,250.00",
-        badgeText: "+14.5%",
-        badgeTrend: "up",
-        footerTrendText: "Trending up this month",
-        footerSubtext: "Consultations & procedure billings",
-    },
-    {
-        title: "New Appointments",
-        value: "28",
-        badgeText: "+18.2%",
-        badgeTrend: "up",
-        footerTrendText: "8 scheduled for today",
-        footerSubtext: "Across all clinic specialists",
-    },
-    {
-        title: "Active Patient Leads",
-        value: "34",
-        badgeText: "+9.4%",
-        badgeTrend: "up",
-        footerTrendText: "12 awaiting consultation",
-        footerSubtext: "High conversion momentum",
-    },
-    {
-        title: "Attendance Rate",
-        value: "96.4%",
-        badgeText: "+3.2%",
-        badgeTrend: "up",
-        footerTrendText: "Steady patient show-up",
-        footerSubtext: "Low cancellation rate this month",
-    },
-];
-
 export function SectionCards({
-    items = DEFAULT_CLINIC_CARDS,
+    items = [],
     className,
 }: {
     items?: MetricCardItem[];
     className?: string;
 }) {
+    if (!items || items.length === 0) {
+        return null;
+    }
     return (
         <div
             className={cn(

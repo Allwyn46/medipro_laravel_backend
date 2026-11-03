@@ -68,7 +68,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Appointment, AppointmentStatus, AppointmentType } from "@/types/appointment";
-import { INITIAL_APPOINTMENTS, INITIAL_PENDING_APPOINTMENTS } from "@/types/appointment";
 
 const features = tableFeatures({
     columnFilteringFeature,
@@ -329,9 +328,11 @@ const columns = columnHelper.columns([
 ]);
 
 export function AppointmentsTable({
-    appointments = INITIAL_APPOINTMENTS,
+    appointments = [],
+    pendingAppointments: initialPending = [],
 }: {
     appointments?: Appointment[];
+    pendingAppointments?: Appointment[];
 }) {
     const [data, setData] = React.useState<Appointment[]>(() => {
         if (typeof window !== "undefined") {
@@ -358,8 +359,21 @@ export function AppointmentsTable({
                 }
             }
         }
-        return INITIAL_PENDING_APPOINTMENTS;
+        return initialPending;
     });
+
+    // Sync with prop updates from server
+    React.useEffect(() => {
+        if (appointments.length > 0 && !localStorage.getItem("medi_confirmed_appointments")) {
+            setData(appointments);
+        }
+    }, [appointments]);
+
+    React.useEffect(() => {
+        if (initialPending.length > 0 && !localStorage.getItem("medi_pending_appointments")) {
+            setPendingAppointments(initialPending);
+        }
+    }, [initialPending]);
 
     // Listen to changes from client booking page (/welcome) or other browser tabs
     React.useEffect(() => {
@@ -393,7 +407,18 @@ export function AppointmentsTable({
         };
     }, []);
 
-    const handleConfirmAppointment = (apt: Appointment) => {
+    const handleConfirmAppointment = async (apt: Appointment) => {
+        try {
+            await fetch(`/api/appointments/${apt.id}/confirm`, {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                },
+            });
+        } catch (e) {
+            console.error("Failed to confirm in database", e);
+        }
+
         const confirmedItem: Appointment = {
             ...apt,
             status: "Confirmed",
@@ -414,11 +439,22 @@ export function AppointmentsTable({
         }
 
         toast.success("Appointment Confirmed!", {
-            description: `${apt.patientName} scheduled with ${apt.doctor} for ${apt.dateTimeFormatted || `${apt.date} at ${apt.time}`}. Moved to daily schedule.`,
+            description: `${apt.patientName} scheduled with ${apt.doctor} for ${apt.dateTimeFormatted || `${apt.date} at ${apt.time}`}. Saved to database.`,
         });
     };
 
-    const handleDeclineAppointment = (apt: Appointment) => {
+    const handleDeclineAppointment = async (apt: Appointment) => {
+        try {
+            await fetch(`/api/appointments/${apt.id}/decline`, {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                },
+            });
+        } catch (e) {
+            console.error("Failed to decline in database", e);
+        }
+
         const updatedPending = pendingAppointments.filter((p) => p.id !== apt.id);
         setPendingAppointments(updatedPending);
 
@@ -432,14 +468,26 @@ export function AppointmentsTable({
         });
     };
 
-    const handleResetDemo = () => {
-        setPendingAppointments(INITIAL_PENDING_APPOINTMENTS);
+    const handleResetDemo = async () => {
+        try {
+            await fetch("/api/appointments/reset-demo", {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                },
+            });
+        } catch (e) {
+            console.error("Failed to reset demo in database", e);
+        }
+
         if (typeof window !== "undefined") {
-            localStorage.setItem("medi_pending_appointments", JSON.stringify(INITIAL_PENDING_APPOINTMENTS));
+            localStorage.removeItem("medi_pending_appointments");
+            localStorage.removeItem("medi_confirmed_appointments");
             window.dispatchEvent(new Event("medi_appointments_updated"));
+            window.location.reload();
         }
         toast.success("Demo appointments reset", {
-            description: "Reloaded 3 demo pending patient requests.",
+            description: "Reloaded appointments from database.",
         });
     };
 
@@ -478,7 +526,7 @@ export function AppointmentsTable({
                     a.patientName.toLowerCase().includes(q) ||
                     a.service.toLowerCase().includes(q) ||
                     a.doctor.toLowerCase().includes(q) ||
-                    a.room.toLowerCase().includes(q)
+                    (a.room ? a.room.toLowerCase().includes(q) : false)
             );
         }
 

@@ -1,8 +1,19 @@
 import { AppointmentsTable } from "@/components/appointments-table";
-import { SectionCards } from "@/components/section-cards";
+import { SectionCards, type MetricCardItem } from "@/components/section-cards";
+import type { Appointment } from "@/types/appointment";
 import Layout from "./layout/Layout";
 
-export default function Page() {
+interface DashboardPageProps {
+    metrics?: MetricCardItem[];
+    appointments?: Appointment[];
+    pendingAppointments?: Appointment[];
+}
+
+export default function Page({
+    metrics,
+    appointments = [],
+    pendingAppointments = [],
+}: DashboardPageProps) {
     return (
         <Layout title="Dashboard">
             <div className="flex flex-1 flex-col">
@@ -17,8 +28,11 @@ export default function Page() {
                                 schedule at a glance.
                             </p>
                         </div>
-                        <SectionCards />
-                        <AppointmentsTable />
+                        <SectionCards items={metrics} />
+                        <AppointmentsTable
+                            appointments={appointments}
+                            pendingAppointments={pendingAppointments}
+                        />
                     </div>
                 </div>
             </div>

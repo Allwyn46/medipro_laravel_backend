@@ -42,10 +42,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Appointment } from "@/types/appointment";
-import {
-    INITIAL_APPOINTMENTS,
-    INITIAL_PENDING_APPOINTMENTS,
-} from "@/types/appointment";
 
 const ALL_TIME_SLOTS = [
     { time: "09:00 AM", period: "Morning" },
@@ -159,7 +155,11 @@ const SERVICES = [
     },
 ];
 
-export default function Welcome() {
+export default function Welcome({
+    bookedSlots = [],
+}: {
+    bookedSlots?: Appointment[];
+}) {
     const { auth } = usePage<{ auth?: { user?: { name: string } } }>().props;
 
     const [formSubmitted, setFormSubmitted] = React.useState(false);
@@ -177,7 +177,7 @@ export default function Welcome() {
                 }
             }
         }
-        return INITIAL_APPOINTMENTS;
+        return bookedSlots;
     });
 
     const [pendingAppointments, setPendingAppointments] = React.useState<
@@ -193,8 +193,14 @@ export default function Welcome() {
                 }
             }
         }
-        return INITIAL_PENDING_APPOINTMENTS;
+        return [];
     });
+
+    React.useEffect(() => {
+        if (bookedSlots.length > 0 && !localStorage.getItem("medi_confirmed_appointments")) {
+            setConfirmedAppointments(bookedSlots);
+        }
+    }, [bookedSlots]);
 
     // Sync with storage events from dashboard confirmations
     React.useEffect(() => {
@@ -281,7 +287,7 @@ export default function Welcome() {
         const defaultDoctor = "Dr. Eddie Lake";
         const initialSlot =
             ALL_TIME_SLOTS.find((s) => {
-                return !INITIAL_APPOINTMENTS.some(
+                return !bookedSlots.some(
                     (apt) =>
                         apt.status !== "Cancelled" &&
                         apt.doctor.toLowerCase() ===
@@ -330,7 +336,7 @@ export default function Welcome() {
         bookingData.timeSlot,
     ]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (
             !bookingData.patientName ||
@@ -386,10 +392,31 @@ export default function Welcome() {
         };
 
         try {
+            await fetch("/api/appointments", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    patientName: newBooking.patientName,
+                    patientEmail: newBooking.patientEmail,
+                    patientPhone: newBooking.patientPhone,
+                    service: newBooking.service,
+                    doctor: newBooking.doctor,
+                    date: newBooking.date,
+                    time: newBooking.time,
+                    notes: newBooking.notes,
+                    source: "Website Booking",
+                }),
+            });
+        } catch (error) {
+            console.error("Failed to save booking to database", error);
+        }
+
+        try {
             const stored = localStorage.getItem("medi_pending_appointments");
-            const existingList: Appointment[] = stored
-                ? JSON.parse(stored)
-                : INITIAL_PENDING_APPOINTMENTS;
+            const existingList: Appointment[] = stored ? JSON.parse(stored) : [];
             const updated = [newBooking, ...existingList];
             localStorage.setItem(
                 "medi_pending_appointments",
