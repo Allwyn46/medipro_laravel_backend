@@ -42,7 +42,10 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Appointment } from "@/types/appointment";
-import { INITIAL_APPOINTMENTS, INITIAL_PENDING_APPOINTMENTS } from "@/types/appointment";
+import {
+    INITIAL_APPOINTMENTS,
+    INITIAL_PENDING_APPOINTMENTS,
+} from "@/types/appointment";
 
 const ALL_TIME_SLOTS = [
     { time: "09:00 AM", period: "Morning" },
@@ -71,11 +74,7 @@ function getLocalDateString(offsetDays = 0): string {
 
 function normalizeTime(time: string): string {
     if (!time) return "";
-    return time
-        .trim()
-        .replace(/^0/, "")
-        .replace(/\s+/g, " ")
-        .toUpperCase();
+    return time.trim().replace(/^0/, "").replace(/\s+/g, " ").toUpperCase();
 }
 
 function isSameDate(aptDate: string, selectedDate: string): boolean {
@@ -114,42 +113,48 @@ const SERVICES = [
         title: "Dental Implants & Cosmetic",
         doctor: "Dr. Eddie Lake",
         icon: StethoscopeIcon,
-        description: "Full-arch implants, smile makeover, porcelain veneers, and teeth whitening.",
+        description:
+            "Full-arch implants, smile makeover, porcelain veneers, and teeth whitening.",
         badge: "Dentistry",
     },
     {
         title: "Orthodontics & Clear Aligners",
         doctor: "Dr. Jamik Tashpulatov",
         icon: SparklesIcon,
-        description: "3D digital scans, transparent aligners, bite correction, and retainers.",
+        description:
+            "3D digital scans, transparent aligners, bite correction, and retainers.",
         badge: "Orthodontics",
     },
     {
         title: "Cardiology & Heart Health",
         doctor: "Dr. Emily Whalen",
         icon: HeartPulseIcon,
-        description: "Cardiac stress tests, ECG, blood pressure management, and lipid care.",
+        description:
+            "Cardiac stress tests, ECG, blood pressure management, and lipid care.",
         badge: "Cardiology",
     },
     {
         title: "Dermatology & Laser Therapy",
         doctor: "Dr. Eddie Lake",
         icon: ActivityIcon,
-        description: "Advanced laser resurfacing, skin therapy, acne treatments, and screenings.",
+        description:
+            "Advanced laser resurfacing, skin therapy, acne treatments, and screenings.",
         badge: "Dermatology",
     },
     {
         title: "Orthopedics & Joint Clinic",
         doctor: "Dr. Emily Whalen",
         icon: ShieldCheckIcon,
-        description: "Arthroscopy assessments, meniscus treatment, joint pain, and sports medicine.",
+        description:
+            "Arthroscopy assessments, meniscus treatment, joint pain, and sports medicine.",
         badge: "Orthopedics",
     },
     {
         title: "Executive Health Screening",
         doctor: "Dr. Jamik Tashpulatov",
         icon: Building2Icon,
-        description: "Full-body checkups, comprehensive pathology diagnostics, and wellness plans.",
+        description:
+            "Full-body checkups, comprehensive pathology diagnostics, and wellness plans.",
         badge: "General Health",
     },
 ];
@@ -159,7 +164,9 @@ export default function Welcome() {
 
     const [formSubmitted, setFormSubmitted] = React.useState(false);
 
-    const [confirmedAppointments, setConfirmedAppointments] = React.useState<Appointment[]>(() => {
+    const [confirmedAppointments, setConfirmedAppointments] = React.useState<
+        Appointment[]
+    >(() => {
         if (typeof window !== "undefined") {
             const stored = localStorage.getItem("medi_confirmed_appointments");
             if (stored) {
@@ -173,7 +180,9 @@ export default function Welcome() {
         return INITIAL_APPOINTMENTS;
     });
 
-    const [pendingAppointments, setPendingAppointments] = React.useState<Appointment[]>(() => {
+    const [pendingAppointments, setPendingAppointments] = React.useState<
+        Appointment[]
+    >(() => {
         if (typeof window !== "undefined") {
             const stored = localStorage.getItem("medi_pending_appointments");
             if (stored) {
@@ -191,7 +200,9 @@ export default function Welcome() {
     React.useEffect(() => {
         const handleSync = () => {
             if (typeof window !== "undefined") {
-                const storedConf = localStorage.getItem("medi_confirmed_appointments");
+                const storedConf = localStorage.getItem(
+                    "medi_confirmed_appointments",
+                );
                 if (storedConf) {
                     try {
                         setConfirmedAppointments(JSON.parse(storedConf));
@@ -199,7 +210,9 @@ export default function Welcome() {
                         console.error(e);
                     }
                 }
-                const storedPend = localStorage.getItem("medi_pending_appointments");
+                const storedPend = localStorage.getItem(
+                    "medi_pending_appointments",
+                );
                 if (storedPend) {
                     try {
                         setPendingAppointments(JSON.parse(storedPend));
@@ -227,7 +240,8 @@ export default function Welcome() {
             // Check confirmed clinic schedule (including Confirmed, In Progress, Scheduled)
             const confirmedMatch = confirmedAppointments.find((apt) => {
                 if (apt.status === "Cancelled") return false;
-                if (apt.doctor.toLowerCase() !== doctor.toLowerCase()) return false;
+                if (apt.doctor.toLowerCase() !== doctor.toLowerCase())
+                    return false;
                 if (!isSameDate(apt.date, date)) return false;
                 return normalizeTime(apt.time) === normalizeTime(timeSlot);
             });
@@ -243,7 +257,8 @@ export default function Welcome() {
             // Check pending requests to prevent double-booking
             const pendingMatch = pendingAppointments.find((apt) => {
                 if (apt.status === "Cancelled") return false;
-                if (apt.doctor.toLowerCase() !== doctor.toLowerCase()) return false;
+                if (apt.doctor.toLowerCase() !== doctor.toLowerCase())
+                    return false;
                 if (!isSameDate(apt.date, date)) return false;
                 return normalizeTime(apt.time) === normalizeTime(timeSlot);
             });
@@ -258,7 +273,7 @@ export default function Welcome() {
 
             return { isBooked: false, patientName: "", status: "" };
         },
-        [confirmedAppointments, pendingAppointments]
+        [confirmedAppointments, pendingAppointments],
     );
 
     const [bookingData, setBookingData] = React.useState(() => {
@@ -269,9 +284,10 @@ export default function Welcome() {
                 return !INITIAL_APPOINTMENTS.some(
                     (apt) =>
                         apt.status !== "Cancelled" &&
-                        apt.doctor.toLowerCase() === defaultDoctor.toLowerCase() &&
+                        apt.doctor.toLowerCase() ===
+                            defaultDoctor.toLowerCase() &&
                         (apt.date === "Today" || apt.date === todayStr) &&
-                        normalizeTime(apt.time) === normalizeTime(s.time)
+                        normalizeTime(apt.time) === normalizeTime(s.time),
                 );
             })?.time || "09:00 AM";
 
@@ -292,12 +308,13 @@ export default function Welcome() {
         const currentCheck = getBookedInfo(
             bookingData.timeSlot,
             bookingData.doctor,
-            bookingData.date
+            bookingData.date,
         );
         if (currentCheck.isBooked) {
             const firstAvailable = ALL_TIME_SLOTS.find(
                 (s) =>
-                    !getBookedInfo(s.time, bookingData.doctor, bookingData.date).isBooked
+                    !getBookedInfo(s.time, bookingData.doctor, bookingData.date)
+                        .isBooked,
             );
             if (firstAvailable) {
                 setBookingData((prev) => ({
@@ -306,23 +323,34 @@ export default function Welcome() {
                 }));
             }
         }
-    }, [bookingData.doctor, bookingData.date, getBookedInfo, bookingData.timeSlot]);
+    }, [
+        bookingData.doctor,
+        bookingData.date,
+        getBookedInfo,
+        bookingData.timeSlot,
+    ]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!bookingData.patientName || !bookingData.phone || !bookingData.date) {
-            alert("Please fill in your name, phone number, and preferred date.");
+        if (
+            !bookingData.patientName ||
+            !bookingData.phone ||
+            !bookingData.date
+        ) {
+            alert(
+                "Please fill in your name, phone number, and preferred date.",
+            );
             return;
         }
 
         const bookedCheck = getBookedInfo(
             bookingData.timeSlot,
             bookingData.doctor,
-            bookingData.date
+            bookingData.date,
         );
         if (bookedCheck.isBooked) {
             alert(
-                `The time slot ${bookingData.timeSlot} is already booked for ${bookingData.doctor} on this date. Please select an available slot.`
+                `The time slot ${bookingData.timeSlot} is already booked for ${bookingData.doctor} on this date. Please select an available slot.`,
             );
             return;
         }
@@ -331,8 +359,8 @@ export default function Welcome() {
             bookingData.date === getLocalDateString(0)
                 ? "Today"
                 : bookingData.date === getLocalDateString(1)
-                ? "Tomorrow"
-                : bookingData.date;
+                  ? "Tomorrow"
+                  : bookingData.date;
 
         const newBooking: Appointment = {
             id: Date.now(),
@@ -365,7 +393,7 @@ export default function Welcome() {
             const updated = [newBooking, ...existingList];
             localStorage.setItem(
                 "medi_pending_appointments",
-                JSON.stringify(updated)
+                JSON.stringify(updated),
             );
             window.dispatchEvent(new Event("medi_appointments_updated"));
         } catch (error) {
@@ -377,7 +405,7 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="Medi Pro - Book an Appointment" />
+            <Head title="Book an Appointment" />
 
             <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
                 {/* Top Navigation Bar */}
@@ -391,23 +419,35 @@ export default function Welcome() {
                                 <span className="text-lg font-bold tracking-tight text-foreground">
                                     Medi Pro
                                 </span>
-                                <span className="hidden sm:inline-block ml-2 text-xs text-muted-foreground border-l pl-2">
+                                {/* <span className="hidden sm:inline-block ml-2 text-xs text-muted-foreground border-l pl-2">
                                     Specialist Medical Clinic
-                                </span>
+                                </span> */}
                             </div>
                         </div>
 
-                        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-                            <a href="#booking" className="hover:text-foreground transition-colors">
+                        <nav className="hidden md:flex items-center gap-6 text-sm font-medium font-sans tracking-tight text-muted-foreground">
+                            <a
+                                href="#booking"
+                                className="hover:text-foreground transition-colors"
+                            >
                                 Book Appointment
                             </a>
-                            <a href="#services" className="hover:text-foreground transition-colors">
+                            <a
+                                href="#services"
+                                className="hover:text-foreground transition-colors"
+                            >
                                 Medical Services
                             </a>
-                            <a href="#specialists" className="hover:text-foreground transition-colors">
+                            <a
+                                href="#specialists"
+                                className="hover:text-foreground transition-colors"
+                            >
                                 Our Specialists
                             </a>
-                            <a href="#contact" className="hover:text-foreground transition-colors">
+                            <a
+                                href="#contact"
+                                className="hover:text-foreground transition-colors"
+                            >
                                 Contact & Hours
                             </a>
                         </nav>
@@ -432,18 +472,25 @@ export default function Welcome() {
                             {/* Left Text */}
                             <div className="lg:col-span-6 flex flex-col gap-6 text-center lg:text-left">
                                 <div className="inline-flex items-center justify-center lg:justify-start">
-                                    <Badge variant="outline" className="px-3 py-1 gap-1.5 text-xs font-medium border-primary/20 bg-primary/5 text-primary">
+                                    <Badge
+                                        variant="outline"
+                                        className="px-3 py-1 gap-1.5 text-xs font-medium border-primary/20 bg-primary/5 text-primary"
+                                    >
                                         <SparklesIcon className="size-3.5" />
                                         Accepting New Patients Today
                                     </Badge>
                                 </div>
 
-                                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1]">
-                                    World-class clinical care, personalized for you.
+                                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium font-sans tracking-tight text-foreground leading-[1.1]">
+                                    World-class clinical care, personalized for
+                                    you.
                                 </h1>
 
-                                <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0">
-                                    Book an appointment with board-certified physicians, dentists, and surgeons. Experience modern diagnostics, zero waiting times, and compassionate healthcare.
+                                <p className="text-base sm:text-lg font-sans tracking-tight text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0">
+                                    Book an appointment with board-certified
+                                    physicians, dentists, and surgeons.
+                                    Experience modern diagnostics, zero waiting
+                                    times, and compassionate healthcare.
                                 </p>
 
                                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
@@ -468,20 +515,26 @@ export default function Welcome() {
                                 {/* Trust stats */}
                                 <div className="grid grid-cols-3 gap-4 pt-6 border-t max-w-lg mx-auto lg:mx-0 text-left">
                                     <div>
-                                        <div className="text-2xl font-bold text-foreground tabular-nums">4.9/5</div>
+                                        <div className="text-2xl font-bold text-foreground tabular-nums">
+                                            4.9/5
+                                        </div>
                                         <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                             <StarIcon className="size-3 fill-amber-400 text-amber-400" />
                                             1,200+ Reviews
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold text-foreground tabular-nums">15+</div>
+                                        <div className="text-2xl font-bold text-foreground tabular-nums">
+                                            15+
+                                        </div>
                                         <div className="text-xs text-muted-foreground mt-0.5">
                                             Medical Specialists
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-bold text-foreground tabular-nums">100%</div>
+                                        <div className="text-2xl font-bold text-foreground tabular-nums">
+                                            100%
+                                        </div>
                                         <div className="text-xs text-muted-foreground mt-0.5">
                                             Confidential Care
                                         </div>
@@ -504,31 +557,67 @@ export default function Welcome() {
                                                     Appointment Requested!
                                                 </h3>
                                                 <p className="mt-2 text-sm text-muted-foreground max-w-sm">
-                                                    Thank you, <span className="font-semibold text-foreground">{bookingData.patientName}</span>. Your consultation request for <span className="font-medium text-foreground">{bookingData.service}</span> has been received.
+                                                    Thank you,{" "}
+                                                    <span className="font-semibold text-foreground">
+                                                        {
+                                                            bookingData.patientName
+                                                        }
+                                                    </span>
+                                                    . Your consultation request
+                                                    for{" "}
+                                                    <span className="font-medium text-foreground">
+                                                        {bookingData.service}
+                                                    </span>{" "}
+                                                    has been received.
                                                 </p>
                                             </div>
 
                                             <div className="w-full rounded-xl bg-muted/50 p-4 border text-left text-xs space-y-2 mt-2">
                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Confirmation Reference:</span>
-                                                    <span className="font-mono font-bold text-foreground">MED-{Math.floor(1000 + Math.random() * 9000)}</span>
+                                                    <span className="text-muted-foreground">
+                                                        Confirmation Reference:
+                                                    </span>
+                                                    <span className="font-mono font-bold text-foreground">
+                                                        MED-
+                                                        {Math.floor(
+                                                            1000 +
+                                                                Math.random() *
+                                                                    9000,
+                                                        )}
+                                                    </span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Specialist:</span>
-                                                    <span className="font-medium text-foreground">{bookingData.doctor}</span>
+                                                    <span className="text-muted-foreground">
+                                                        Specialist:
+                                                    </span>
+                                                    <span className="font-medium text-foreground">
+                                                        {bookingData.doctor}
+                                                    </span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Preferred Date & Slot:</span>
-                                                    <span className="font-medium text-foreground">{bookingData.date} ({bookingData.timeSlot})</span>
+                                                    <span className="text-muted-foreground">
+                                                        Preferred Date & Slot:
+                                                    </span>
+                                                    <span className="font-medium text-foreground">
+                                                        {bookingData.date} (
+                                                        {bookingData.timeSlot})
+                                                    </span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Contact Phone:</span>
-                                                    <span className="font-medium text-foreground">{bookingData.phone}</span>
+                                                    <span className="text-muted-foreground">
+                                                        Contact Phone:
+                                                    </span>
+                                                    <span className="font-medium text-foreground">
+                                                        {bookingData.phone}
+                                                    </span>
                                                 </div>
                                             </div>
 
                                             <p className="text-xs text-muted-foreground">
-                                                Our patient coordinator will contact you shortly to confirm your arrival window and health questionnaire.
+                                                Our patient coordinator will
+                                                contact you shortly to confirm
+                                                your arrival window and health
+                                                questionnaire.
                                             </p>
 
                                             <div className="w-full pt-2">
@@ -540,10 +629,14 @@ export default function Welcome() {
                                                             patientName: "",
                                                             email: "",
                                                             phone: "",
-                                                            service: "Dental Implants & Cosmetic",
+                                                            service:
+                                                                "Dental Implants & Cosmetic",
                                                             doctor: "Dr. Eddie Lake",
-                                                            date: getLocalDateString(0),
-                                                            timeSlot: "09:00 AM",
+                                                            date: getLocalDateString(
+                                                                0,
+                                                            ),
+                                                            timeSlot:
+                                                                "09:00 AM",
                                                             notes: "",
                                                         });
                                                     }}
@@ -554,7 +647,10 @@ export default function Welcome() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                                        <form
+                                            onSubmit={handleSubmit}
+                                            className="flex flex-col gap-4"
+                                        >
                                             <div className="flex flex-col gap-1 border-b pb-4">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon className="size-5 text-primary" />
@@ -563,29 +659,44 @@ export default function Welcome() {
                                                     </h2>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground">
-                                                    Select your treatment, preferred specialist, and consultation time.
+                                                    Select your treatment,
+                                                    preferred specialist, and
+                                                    consultation time.
                                                 </p>
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1.5">
-                                                    <Label htmlFor="patientName" className="text-xs font-medium">
+                                                    <Label
+                                                        htmlFor="patientName"
+                                                        className="text-xs font-medium"
+                                                    >
                                                         Full Name *
                                                     </Label>
                                                     <Input
                                                         id="patientName"
                                                         placeholder="e.g. Sarah Connor"
                                                         required
-                                                        value={bookingData.patientName}
+                                                        value={
+                                                            bookingData.patientName
+                                                        }
                                                         onChange={(e) =>
-                                                            setBookingData({ ...bookingData, patientName: e.target.value })
+                                                            setBookingData({
+                                                                ...bookingData,
+                                                                patientName:
+                                                                    e.target
+                                                                        .value,
+                                                            })
                                                         }
                                                         className="text-xs h-9"
                                                     />
                                                 </div>
 
                                                 <div className="flex flex-col gap-1.5">
-                                                    <Label htmlFor="phone" className="text-xs font-medium">
+                                                    <Label
+                                                        htmlFor="phone"
+                                                        className="text-xs font-medium"
+                                                    >
                                                         Phone Number *
                                                     </Label>
                                                     <Input
@@ -593,9 +704,15 @@ export default function Welcome() {
                                                         type="tel"
                                                         placeholder="+1 (555) 000-0000"
                                                         required
-                                                        value={bookingData.phone}
+                                                        value={
+                                                            bookingData.phone
+                                                        }
                                                         onChange={(e) =>
-                                                            setBookingData({ ...bookingData, phone: e.target.value })
+                                                            setBookingData({
+                                                                ...bookingData,
+                                                                phone: e.target
+                                                                    .value,
+                                                            })
                                                         }
                                                         className="text-xs h-9"
                                                     />
@@ -603,7 +720,10 @@ export default function Welcome() {
                                             </div>
 
                                             <div className="flex flex-col gap-1.5">
-                                                <Label htmlFor="email" className="text-xs font-medium">
+                                                <Label
+                                                    htmlFor="email"
+                                                    className="text-xs font-medium"
+                                                >
                                                     Email Address (Optional)
                                                 </Label>
                                                 <Input
@@ -612,7 +732,11 @@ export default function Welcome() {
                                                     placeholder="sarah@example.com"
                                                     value={bookingData.email}
                                                     onChange={(e) =>
-                                                        setBookingData({ ...bookingData, email: e.target.value })
+                                                        setBookingData({
+                                                            ...bookingData,
+                                                            email: e.target
+                                                                .value,
+                                                        })
                                                     }
                                                     className="text-xs h-9"
                                                 />
@@ -621,17 +745,32 @@ export default function Welcome() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1.5">
                                                     <Label className="text-xs font-medium">
-                                                        Medical Department / Service *
+                                                        Medical Department /
+                                                        Service *
                                                     </Label>
                                                     <Select
-                                                        value={bookingData.service}
-                                                        onValueChange={(val) => {
+                                                        value={
+                                                            bookingData.service
+                                                        }
+                                                        onValueChange={(
+                                                            val,
+                                                        ) => {
                                                             if (val) {
-                                                                const s = SERVICES.find((item) => item.title === val);
+                                                                const s =
+                                                                    SERVICES.find(
+                                                                        (
+                                                                            item,
+                                                                        ) =>
+                                                                            item.title ===
+                                                                            val,
+                                                                    );
                                                                 setBookingData({
                                                                     ...bookingData,
-                                                                    service: val,
-                                                                    doctor: s ? s.doctor : bookingData.doctor,
+                                                                    service:
+                                                                        val,
+                                                                    doctor: s
+                                                                        ? s.doctor
+                                                                        : bookingData.doctor,
                                                                 });
                                                             }
                                                         }}
@@ -641,11 +780,22 @@ export default function Welcome() {
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectGroup>
-                                                                {SERVICES.map((s) => (
-                                                                    <SelectItem key={s.title} value={s.title}>
-                                                                        {s.title}
-                                                                    </SelectItem>
-                                                                ))}
+                                                                {SERVICES.map(
+                                                                    (s) => (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                s.title
+                                                                            }
+                                                                            value={
+                                                                                s.title
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                s.title
+                                                                            }
+                                                                        </SelectItem>
+                                                                    ),
+                                                                )}
                                                             </SelectGroup>
                                                         </SelectContent>
                                                     </Select>
@@ -656,9 +806,17 @@ export default function Welcome() {
                                                         Specialist / Doctor
                                                     </Label>
                                                     <Select
-                                                        value={bookingData.doctor}
-                                                        onValueChange={(val) => {
-                                                            if (val) setBookingData({ ...bookingData, doctor: val });
+                                                        value={
+                                                            bookingData.doctor
+                                                        }
+                                                        onValueChange={(
+                                                            val,
+                                                        ) => {
+                                                            if (val)
+                                                                setBookingData({
+                                                                    ...bookingData,
+                                                                    doctor: val,
+                                                                });
                                                         }}
                                                     >
                                                         <SelectTrigger className="w-full text-xs h-9">
@@ -666,10 +824,28 @@ export default function Welcome() {
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectGroup>
-                                                                <SelectItem value="Dr. Eddie Lake">Dr. Eddie Lake (Dental & Derma)</SelectItem>
-                                                                <SelectItem value="Dr. Jamik Tashpulatov">Dr. Jamik Tashpulatov (Ortho & Surgery)</SelectItem>
-                                                                <SelectItem value="Dr. Emily Whalen">Dr. Emily Whalen (Cardio & Joints)</SelectItem>
-                                                                <SelectItem value="Dr. Sarah Jenkins">Dr. Sarah Jenkins (Pediatrics)</SelectItem>
+                                                                <SelectItem value="Dr. Eddie Lake">
+                                                                    Dr. Eddie
+                                                                    Lake (Dental
+                                                                    & Derma)
+                                                                </SelectItem>
+                                                                <SelectItem value="Dr. Jamik Tashpulatov">
+                                                                    Dr. Jamik
+                                                                    Tashpulatov
+                                                                    (Ortho &
+                                                                    Surgery)
+                                                                </SelectItem>
+                                                                <SelectItem value="Dr. Emily Whalen">
+                                                                    Dr. Emily
+                                                                    Whalen
+                                                                    (Cardio &
+                                                                    Joints)
+                                                                </SelectItem>
+                                                                <SelectItem value="Dr. Sarah Jenkins">
+                                                                    Dr. Sarah
+                                                                    Jenkins
+                                                                    (Pediatrics)
+                                                                </SelectItem>
                                                             </SelectGroup>
                                                         </SelectContent>
                                                     </Select>
@@ -679,25 +855,40 @@ export default function Welcome() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className="flex items-center justify-between">
-                                                        <Label htmlFor="date" className="text-xs font-medium">
+                                                        <Label
+                                                            htmlFor="date"
+                                                            className="text-xs font-medium"
+                                                        >
                                                             Preferred Date *
                                                         </Label>
                                                         <span className="text-[10px] text-muted-foreground font-medium">
-                                                            {bookingData.date === getLocalDateString(0)
+                                                            {bookingData.date ===
+                                                            getLocalDateString(
+                                                                0,
+                                                            )
                                                                 ? "Today"
-                                                                : bookingData.date === getLocalDateString(1)
-                                                                ? "Tomorrow"
-                                                                : ""}
+                                                                : bookingData.date ===
+                                                                    getLocalDateString(
+                                                                        1,
+                                                                    )
+                                                                  ? "Tomorrow"
+                                                                  : ""}
                                                         </span>
                                                     </div>
                                                     <Input
                                                         id="date"
                                                         type="date"
                                                         required
-                                                        min={getLocalDateString(0)}
+                                                        min={getLocalDateString(
+                                                            0,
+                                                        )}
                                                         value={bookingData.date}
                                                         onChange={(e) =>
-                                                            setBookingData({ ...bookingData, date: e.target.value })
+                                                            setBookingData({
+                                                                ...bookingData,
+                                                                date: e.target
+                                                                    .value,
+                                                            })
                                                         }
                                                         className="text-xs h-9"
                                                     />
@@ -708,12 +899,29 @@ export default function Welcome() {
                                                         Time Window Dropdown
                                                     </Label>
                                                     <Select
-                                                        value={bookingData.timeSlot}
-                                                        onValueChange={(val) => {
+                                                        value={
+                                                            bookingData.timeSlot
+                                                        }
+                                                        onValueChange={(
+                                                            val,
+                                                        ) => {
                                                             if (val) {
-                                                                const booked = getBookedInfo(val, bookingData.doctor, bookingData.date);
-                                                                if (!booked.isBooked) {
-                                                                    setBookingData({ ...bookingData, timeSlot: val });
+                                                                const booked =
+                                                                    getBookedInfo(
+                                                                        val,
+                                                                        bookingData.doctor,
+                                                                        bookingData.date,
+                                                                    );
+                                                                if (
+                                                                    !booked.isBooked
+                                                                ) {
+                                                                    setBookingData(
+                                                                        {
+                                                                            ...bookingData,
+                                                                            timeSlot:
+                                                                                val,
+                                                                        },
+                                                                    );
                                                                 }
                                                             }
                                                         }}
@@ -723,25 +931,46 @@ export default function Welcome() {
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectGroup>
-                                                                {ALL_TIME_SLOTS.map((s) => {
-                                                                    const booked = getBookedInfo(s.time, bookingData.doctor, bookingData.date);
-                                                                    return (
-                                                                        <SelectItem
-                                                                            key={s.time}
-                                                                            value={s.time}
-                                                                            disabled={booked.isBooked}
-                                                                            className={cn(
-                                                                                booked.isBooked &&
-                                                                                    "opacity-50 text-muted-foreground cursor-not-allowed line-through"
-                                                                            )}
-                                                                        >
-                                                                            {s.time} ({s.period})
-                                                                            {booked.isBooked
-                                                                                ? " — Confirmed (Unavailable)"
-                                                                                : " — Available"}
-                                                                        </SelectItem>
-                                                                    );
-                                                                })}
+                                                                {ALL_TIME_SLOTS.map(
+                                                                    (s) => {
+                                                                        const booked =
+                                                                            getBookedInfo(
+                                                                                s.time,
+                                                                                bookingData.doctor,
+                                                                                bookingData.date,
+                                                                            );
+                                                                        return (
+                                                                            <SelectItem
+                                                                                key={
+                                                                                    s.time
+                                                                                }
+                                                                                value={
+                                                                                    s.time
+                                                                                }
+                                                                                disabled={
+                                                                                    booked.isBooked
+                                                                                }
+                                                                                className={cn(
+                                                                                    booked.isBooked &&
+                                                                                        "opacity-50 text-muted-foreground cursor-not-allowed line-through",
+                                                                                )}
+                                                                            >
+                                                                                {
+                                                                                    s.time
+                                                                                }{" "}
+                                                                                (
+                                                                                {
+                                                                                    s.period
+                                                                                }
+
+                                                                                )
+                                                                                {booked.isBooked
+                                                                                    ? " — Confirmed (Unavailable)"
+                                                                                    : " — Available"}
+                                                                            </SelectItem>
+                                                                        );
+                                                                    },
+                                                                )}
                                                             </SelectGroup>
                                                         </SelectContent>
                                                     </Select>
@@ -754,77 +983,120 @@ export default function Welcome() {
                                                     <div className="flex items-center gap-1.5">
                                                         <ClockIcon className="size-3.5 text-primary" />
                                                         <span className="text-xs font-semibold text-foreground">
-                                                            Available Slots for {bookingData.doctor.split(" ")[1]}
+                                                            Available Slots for{" "}
+                                                            {
+                                                                bookingData.doctor.split(
+                                                                    " ",
+                                                                )[1]
+                                                            }
                                                         </span>
                                                     </div>
                                                     <span className="text-[11px] text-muted-foreground">
                                                         <span className="font-semibold text-foreground">
-                                                            {ALL_TIME_SLOTS.filter(
-                                                                (s) => !getBookedInfo(s.time, bookingData.doctor, bookingData.date).isBooked
-                                                            ).length}
+                                                            {
+                                                                ALL_TIME_SLOTS.filter(
+                                                                    (s) =>
+                                                                        !getBookedInfo(
+                                                                            s.time,
+                                                                            bookingData.doctor,
+                                                                            bookingData.date,
+                                                                        )
+                                                                            .isBooked,
+                                                                ).length
+                                                            }
                                                         </span>{" "}
-                                                        of {ALL_TIME_SLOTS.length} open
+                                                        of{" "}
+                                                        {ALL_TIME_SLOTS.length}{" "}
+                                                        open
                                                     </span>
                                                 </div>
 
                                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
-                                                    {ALL_TIME_SLOTS.map((slot) => {
-                                                        const booked = getBookedInfo(slot.time, bookingData.doctor, bookingData.date);
-                                                        const isBooked = booked.isBooked;
-                                                        const isSelected = bookingData.timeSlot === slot.time;
+                                                    {ALL_TIME_SLOTS.map(
+                                                        (slot) => {
+                                                            const booked =
+                                                                getBookedInfo(
+                                                                    slot.time,
+                                                                    bookingData.doctor,
+                                                                    bookingData.date,
+                                                                );
+                                                            const isBooked =
+                                                                booked.isBooked;
+                                                            const isSelected =
+                                                                bookingData.timeSlot ===
+                                                                slot.time;
 
-                                                        if (isBooked) {
+                                                            if (isBooked) {
+                                                                return (
+                                                                    <div
+                                                                        key={
+                                                                            slot.time
+                                                                        }
+                                                                        className="relative flex flex-col items-center justify-center p-2 rounded-lg border border-dashed border-border/80 bg-muted/40 text-muted-foreground/60 cursor-not-allowed select-none"
+                                                                        title={`${slot.time} is already confirmed for ${bookingData.doctor}`}
+                                                                    >
+                                                                        <span className="text-xs font-medium line-through decoration-muted-foreground/60">
+                                                                            {
+                                                                                slot.time
+                                                                            }
+                                                                        </span>
+                                                                        <span className="text-[9px] font-semibold tracking-tight text-rose-500/80 dark:text-rose-400 mt-0.5 flex items-center gap-1">
+                                                                            <span className="size-1 rounded-full bg-rose-500" />
+                                                                            Booked
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            }
+
                                                             return (
-                                                                <div
-                                                                    key={slot.time}
-                                                                    className="relative flex flex-col items-center justify-center p-2 rounded-lg border border-dashed border-border/80 bg-muted/40 text-muted-foreground/60 cursor-not-allowed select-none"
-                                                                    title={`${slot.time} is already confirmed for ${bookingData.doctor}`}
-                                                                >
-                                                                    <span className="text-xs font-medium line-through decoration-muted-foreground/60">
-                                                                        {slot.time}
-                                                                    </span>
-                                                                    <span className="text-[9px] font-semibold tracking-tight text-rose-500/80 dark:text-rose-400 mt-0.5 flex items-center gap-1">
-                                                                        <span className="size-1 rounded-full bg-rose-500" />
-                                                                        Booked
-                                                                    </span>
-                                                                </div>
-                                                            );
-                                                        }
-
-                                                        return (
-                                                            <button
-                                                                key={slot.time}
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setBookingData({ ...bookingData, timeSlot: slot.time })
-                                                                }
-                                                                className={cn(
-                                                                    "relative flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:scale-[1.02]",
-                                                                    isSelected
-                                                                        ? "bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/20"
-                                                                        : "bg-background hover:bg-muted/50 hover:border-primary/40 text-foreground"
-                                                                )}
-                                                            >
-                                                                <span className="text-xs font-semibold">{slot.time}</span>
-                                                                <span
+                                                                <button
+                                                                    key={
+                                                                        slot.time
+                                                                    }
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setBookingData(
+                                                                            {
+                                                                                ...bookingData,
+                                                                                timeSlot:
+                                                                                    slot.time,
+                                                                            },
+                                                                        )
+                                                                    }
                                                                     className={cn(
-                                                                        "text-[9px] tracking-tight font-normal mt-0.5 flex items-center gap-1",
+                                                                        "relative flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:scale-[1.02]",
                                                                         isSelected
-                                                                            ? "text-primary-foreground/90 font-medium"
-                                                                            : "text-emerald-600 dark:text-emerald-400"
+                                                                            ? "bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/20"
+                                                                            : "bg-background hover:bg-muted/50 hover:border-primary/40 text-foreground",
                                                                     )}
                                                                 >
+                                                                    <span className="text-xs font-semibold">
+                                                                        {
+                                                                            slot.time
+                                                                        }
+                                                                    </span>
                                                                     <span
                                                                         className={cn(
-                                                                            "size-1 rounded-full",
-                                                                            isSelected ? "bg-white" : "bg-emerald-500"
+                                                                            "text-[9px] tracking-tight font-normal mt-0.5 flex items-center gap-1",
+                                                                            isSelected
+                                                                                ? "text-primary-foreground/90 font-medium"
+                                                                                : "text-emerald-600 dark:text-emerald-400",
                                                                         )}
-                                                                    />
-                                                                    Available
-                                                                </span>
-                                                            </button>
-                                                        );
-                                                    })}
+                                                                    >
+                                                                        <span
+                                                                            className={cn(
+                                                                                "size-1 rounded-full",
+                                                                                isSelected
+                                                                                    ? "bg-white"
+                                                                                    : "bg-emerald-500",
+                                                                            )}
+                                                                        />
+                                                                        Available
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        },
+                                                    )}
                                                 </div>
 
                                                 <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40">
@@ -834,21 +1106,30 @@ export default function Welcome() {
                                                     </span>
                                                     <span className="flex items-center gap-1.5">
                                                         <span className="size-1.5 rounded-full bg-rose-500" />
-                                                        Confirmed with Doctor (Blocked)
+                                                        Confirmed with Doctor
+                                                        (Blocked)
                                                     </span>
                                                 </div>
                                             </div>
 
                                             <div className="flex flex-col gap-1.5">
-                                                <Label htmlFor="notes" className="text-xs font-medium">
-                                                    Reason for Visit / Symptoms (Optional)
+                                                <Label
+                                                    htmlFor="notes"
+                                                    className="text-xs font-medium"
+                                                >
+                                                    Reason for Visit / Symptoms
+                                                    (Optional)
                                                 </Label>
                                                 <Input
                                                     id="notes"
                                                     placeholder="Brief description of symptoms, routine checkup, or inquiry..."
                                                     value={bookingData.notes}
                                                     onChange={(e) =>
-                                                        setBookingData({ ...bookingData, notes: e.target.value })
+                                                        setBookingData({
+                                                            ...bookingData,
+                                                            notes: e.target
+                                                                .value,
+                                                        })
                                                     }
                                                     className="text-xs h-9"
                                                 />
@@ -863,7 +1144,10 @@ export default function Welcome() {
                                             </Button>
 
                                             <p className="text-[11px] text-center text-muted-foreground">
-                                                No upfront payment required. 100% confidential. You can cancel or reschedule at any time.
+                                                No upfront payment required.
+                                                100% confidential. You can
+                                                cancel or reschedule at any
+                                                time.
                                             </p>
                                         </form>
                                     )}
@@ -874,7 +1158,10 @@ export default function Welcome() {
                 </section>
 
                 {/* Clinical Services Section */}
-                <section id="services" className="py-16 md:py-24 border-b bg-muted/20">
+                <section
+                    id="services"
+                    className="py-16 md:py-24 border-b bg-muted/20"
+                >
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div className="text-center max-w-2xl mx-auto mb-12">
                             <Badge variant="outline" className="mb-2 text-xs">
@@ -884,7 +1171,9 @@ export default function Welcome() {
                                 Comprehensive Healthcare Services
                             </h2>
                             <p className="mt-3 text-sm text-muted-foreground">
-                                From routine preventive checkups to complex specialized surgeries, our clinical departments provide exceptional patient care.
+                                From routine preventive checkups to complex
+                                specialized surgeries, our clinical departments
+                                provide exceptional patient care.
                             </p>
                         </div>
 
@@ -901,7 +1190,10 @@ export default function Welcome() {
                                                 <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                                     <Icon className="size-5" />
                                                 </div>
-                                                <Badge variant="secondary" className="text-[10px]">
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="text-[10px]"
+                                                >
                                                     {service.badge}
                                                 </Badge>
                                             </div>
@@ -914,7 +1206,10 @@ export default function Welcome() {
                                         </CardHeader>
                                         <div className="px-4 pb-4 pt-0 text-xs flex items-center justify-between border-t mt-3 pt-3">
                                             <span className="text-muted-foreground">
-                                                Lead: <span className="font-medium text-foreground">{service.doctor}</span>
+                                                Lead:{" "}
+                                                <span className="font-medium text-foreground">
+                                                    {service.doctor}
+                                                </span>
                                             </span>
                                             <a
                                                 href="#booking"
@@ -949,7 +1244,9 @@ export default function Welcome() {
                                 Meet Our Medical Directors
                             </h2>
                             <p className="mt-3 text-sm text-muted-foreground">
-                                Renowned physicians and board-certified practitioners with decades of combined clinical excellence.
+                                Renowned physicians and board-certified
+                                practitioners with decades of combined clinical
+                                excellence.
                             </p>
                         </div>
 
@@ -1025,10 +1322,18 @@ export default function Welcome() {
                                     <PhoneIcon className="size-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-sm text-foreground">Phone & Emergency</h3>
-                                    <p className="text-xs text-muted-foreground mt-1">Direct Clinic Line:</p>
-                                    <p className="text-sm font-semibold text-foreground mt-0.5">+1 (555) 234-5678</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Emergency 24/7 On-Call</p>
+                                    <h3 className="font-semibold text-sm text-foreground">
+                                        Phone & Emergency
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Direct Clinic Line:
+                                    </p>
+                                    <p className="text-sm font-semibold text-foreground mt-0.5">
+                                        +1 (555) 234-5678
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Emergency 24/7 On-Call
+                                    </p>
                                 </div>
                             </div>
 
@@ -1037,10 +1342,18 @@ export default function Welcome() {
                                     <ClockIcon className="size-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-sm text-foreground">Clinic Hours</h3>
-                                    <p className="text-xs text-muted-foreground mt-1">Mon – Fri: 8:00 AM – 7:00 PM</p>
-                                    <p className="text-xs text-muted-foreground">Saturday: 9:00 AM – 4:00 PM</p>
-                                    <p className="text-xs text-muted-foreground">Sunday: Urgent Care Only</p>
+                                    <h3 className="font-semibold text-sm text-foreground">
+                                        Clinic Hours
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Mon – Fri: 8:00 AM – 7:00 PM
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Saturday: 9:00 AM – 4:00 PM
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Sunday: Urgent Care Only
+                                    </p>
                                 </div>
                             </div>
 
@@ -1049,10 +1362,18 @@ export default function Welcome() {
                                     <MapPinIcon className="size-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-sm text-foreground">Location</h3>
-                                    <p className="text-xs text-muted-foreground mt-1">Medi Pro Medical Tower</p>
-                                    <p className="text-xs text-muted-foreground">Suite 400, 750 Health Science Blvd</p>
-                                    <p className="text-xs text-muted-foreground">Valet & Patient Parking Available</p>
+                                    <h3 className="font-semibold text-sm text-foreground">
+                                        Location
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Medi Pro Medical Tower
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Suite 400, 750 Health Science Blvd
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Valet & Patient Parking Available
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -1064,19 +1385,33 @@ export default function Welcome() {
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                             <StethoscopeIcon className="size-4 text-primary" />
-                            <span className="font-semibold text-foreground">Medi Pro Clinic</span>
-                            <span>• All rights reserved &copy; {new Date().getFullYear()}</span>
+                            <span className="font-semibold text-foreground">
+                                Medi Pro Clinic
+                            </span>
+                            <span>
+                                • All rights reserved &copy;{" "}
+                                {new Date().getFullYear()}
+                            </span>
                         </div>
                         <div className="flex items-center gap-4">
-                            <a href="#services" className="hover:text-foreground">
+                            <a
+                                href="#services"
+                                className="hover:text-foreground"
+                            >
                                 Services
                             </a>
                             <span>•</span>
-                            <a href="#specialists" className="hover:text-foreground">
+                            <a
+                                href="#specialists"
+                                className="hover:text-foreground"
+                            >
                                 Doctors
                             </a>
                             <span>•</span>
-                            <a href="#booking" className="hover:text-foreground">
+                            <a
+                                href="#booking"
+                                className="hover:text-foreground"
+                            >
                                 Book Online
                             </a>
                             <span>•</span>

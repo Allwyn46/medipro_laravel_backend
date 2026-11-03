@@ -1,8 +1,10 @@
+import { Head } from "@inertiajs/react";
 import { LoginForm } from "@/components/login-form";
 
 export default function Login() {
     return (
         <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+            <Head title="Staff Login" />
             <div className="w-full max-w-[380px]">
                 <LoginForm />
             </div>

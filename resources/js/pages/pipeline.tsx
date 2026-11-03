@@ -382,7 +382,7 @@ export default function PipelinePage({
                 {/* Header */}
                 <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold font-sans tracking-tight text-foreground lg:text-3xl">
+                        <h1 className="text-4xl font-medium font-sans tracking-tight text-foreground lg:text-4xl">
                             Clinical Pipeline
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">

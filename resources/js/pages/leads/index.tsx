@@ -37,7 +37,12 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+    Card,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SectionCards, type MetricCardItem } from "@/components/section-cards";
 import {
@@ -147,7 +152,9 @@ const columns = columnHelper.columns([
                 variant="ghost"
                 size="sm"
                 className="-ml-3 h-8 text-xs font-medium hover:bg-transparent"
-                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                onClick={() =>
+                    column.toggleSorting(column.getIsSorted() === "asc")
+                }
             >
                 Patient / Lead
                 <ArrowUpDownIcon className="ml-1 size-3 text-muted-foreground" />
@@ -187,7 +194,9 @@ const columns = columnHelper.columns([
                 variant="ghost"
                 size="sm"
                 className="-ml-3 h-8 text-xs font-medium hover:bg-transparent"
-                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                onClick={() =>
+                    column.toggleSorting(column.getIsSorted() === "asc")
+                }
             >
                 Status
                 <ArrowUpDownIcon className="ml-1 size-3 text-muted-foreground" />
@@ -268,17 +277,23 @@ const columns = columnHelper.columns([
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
                         <DropdownMenuItem
-                            render={<Link href={`/leads/${lead.id}`} prefetch />}
+                            render={
+                                <Link href={`/leads/${lead.id}`} prefetch />
+                            }
                         >
                             View Lead Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem render={<Link href="/pipeline" prefetch />}>
+                        <DropdownMenuItem
+                            render={<Link href="/pipeline" prefetch />}
+                        >
                             View in Pipeline
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             onClick={() => {
-                                alert(`Contacting ${lead.name} (${lead.phone})`);
+                                alert(
+                                    `Contacting ${lead.name} (${lead.phone})`,
+                                );
                             }}
                         >
                             Call Patient
@@ -295,9 +310,8 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
     const [rowSelection, setRowSelection] = React.useState({});
     const [columnVisibility, setColumnVisibility] =
         React.useState<ColumnVisibilityState>({});
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-        []
-    );
+    const [columnFilters, setColumnFilters] =
+        React.useState<ColumnFiltersState>([]);
     const [sorting, setSorting] = React.useState<SortingState>([
         { id: "createdAt", desc: true },
     ]);
@@ -312,7 +326,7 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
     const totalLeads = data.length;
     const totalPipelineValue = data.reduce((acc, lead) => acc + lead.value, 0);
     const scheduledCount = data.filter(
-        (l) => l.status === "Consultation Scheduled"
+        (l) => l.status === "Consultation Scheduled",
     ).length;
     const wonCount = data.filter((l) => l.status === "Won").length;
 
@@ -331,7 +345,7 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                     lead.name.toLowerCase().includes(q) ||
                     lead.email.toLowerCase().includes(q) ||
                     lead.service.toLowerCase().includes(q) ||
-                    lead.doctor.toLowerCase().includes(q)
+                    lead.doctor.toLowerCase().includes(q),
             );
         }
 
@@ -393,7 +407,7 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                 footerSubtext: "Treatment plans accepted",
             },
         ],
-        [totalLeads, totalPipelineValue, scheduledCount, wonCount]
+        [totalLeads, totalPipelineValue, scheduledCount, wonCount],
     );
 
     return (
@@ -402,11 +416,12 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                 {/* Page Title & Intro */}
                 <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold font-sans tracking-tight text-foreground lg:text-3xl">
+                        <h1 className="text-4xl font-medium font-sans tracking-tight text-foreground lg:text-4xl">
                             Leads Management
                         </h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Manage patient inquiries, consultation bookings, and clinic treatment leads.
+                        <p className="mt-1 text-sm font-sans tracking-tight text-muted-foreground">
+                            Manage patient inquiries, consultation bookings, and
+                            clinic treatment leads.
                         </p>
                     </div>
                     <div className="flex items-center gap-2 mt-4 md:mt-0">
@@ -424,7 +439,10 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                 </div>
 
                 {/* Metrics Cards */}
-                <SectionCards items={leadsMetricCards} className="px-0 lg:px-0" />
+                <SectionCards
+                    items={leadsMetricCards}
+                    className="px-0 lg:px-0"
+                />
 
                 {/* TanStack Table Section */}
                 <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs">
@@ -436,23 +454,31 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                 <Input
                                     placeholder="Search by name, email, service..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) =>
+                                        setSearchQuery(e.target.value)
+                                    }
                                     className="pl-9 text-xs h-9"
                                 />
                             </div>
 
                             <Select
                                 value={statusFilter}
-                                onValueChange={(val) => setStatusFilter(val ?? "ALL")}
+                                onValueChange={(val) =>
+                                    setStatusFilter(val ?? "ALL")
+                                }
                             >
                                 <SelectTrigger className="w-44 h-9">
                                     <SelectValue placeholder="All Statuses" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        <SelectItem value="ALL">All Statuses</SelectItem>
+                                        <SelectItem value="ALL">
+                                            All Statuses
+                                        </SelectItem>
                                         <SelectItem value="New">New</SelectItem>
-                                        <SelectItem value="Contacted">Contacted</SelectItem>
+                                        <SelectItem value="Contacted">
+                                            Contacted
+                                        </SelectItem>
                                         <SelectItem value="Consultation Scheduled">
                                             Consultation Scheduled
                                         </SelectItem>
@@ -460,7 +486,9 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                             Treatment Plan Sent
                                         </SelectItem>
                                         <SelectItem value="Won">Won</SelectItem>
-                                        <SelectItem value="Lost">Lost</SelectItem>
+                                        <SelectItem value="Lost">
+                                            Lost
+                                        </SelectItem>
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
@@ -470,19 +498,29 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                             {/* Columns Visibility */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger
-                                    render={<Button variant="outline" size="sm" className="h-9" />}
+                                    render={
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9"
+                                        />
+                                    }
                                 >
                                     <Columns3Icon className="size-4 mr-1.5" />
                                     Columns
                                     <ChevronDownIcon className="size-3.5 ml-1.5 text-muted-foreground" />
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="w-44"
+                                >
                                     {table
                                         .getAllColumns()
                                         .filter(
                                             (column) =>
                                                 typeof column.accessorFn !==
-                                                    "undefined" && column.getCanHide()
+                                                    "undefined" &&
+                                                column.getCanHide(),
                                         )
                                         .map((column) => (
                                             <DropdownMenuCheckboxItem
@@ -490,7 +528,9 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                                 className="capitalize text-xs"
                                                 checked={column.getIsVisible()}
                                                 onCheckedChange={(value) =>
-                                                    column.toggleVisibility(!!value)
+                                                    column.toggleVisibility(
+                                                        !!value,
+                                                    )
                                                 }
                                             >
                                                 {column.id}
@@ -529,18 +569,23 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                         <TableRow
                                             key={row.id}
                                             data-state={
-                                                row.getIsSelected() && "selected"
+                                                row.getIsSelected() &&
+                                                "selected"
                                             }
                                             className="group/row hover:bg-muted/40 transition-colors"
                                         >
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell
-                                                    key={cell.id}
-                                                    className="py-3 text-xs"
-                                                >
-                                                    <FlexRender cell={cell} />
-                                                </TableCell>
-                                            ))}
+                                            {row
+                                                .getVisibleCells()
+                                                .map((cell) => (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        className="py-3 text-xs"
+                                                    >
+                                                        <FlexRender
+                                                            cell={cell}
+                                                        />
+                                                    </TableCell>
+                                                ))}
                                         </TableRow>
                                     ))
                                 ) : (
@@ -549,7 +594,8 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                             colSpan={columns.length}
                                             className="h-32 text-center text-muted-foreground"
                                         >
-                                            No clinical leads match your search criteria.
+                                            No clinical leads match your search
+                                            criteria.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -561,7 +607,8 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-1">
                         <div className="text-xs text-muted-foreground">
                             {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                            {table.getFilteredRowModel().rows.length} lead(s) selected.
+                            {table.getFilteredRowModel().rows.length} lead(s)
+                            selected.
                         </div>
 
                         <div className="flex items-center gap-6">
@@ -585,7 +632,10 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                     <SelectContent side="top">
                                         <SelectGroup>
                                             {[5, 10, 20, 50].map((sz) => (
-                                                <SelectItem key={sz} value={`${sz}`}>
+                                                <SelectItem
+                                                    key={sz}
+                                                    value={`${sz}`}
+                                                >
                                                     {sz}
                                                 </SelectItem>
                                             ))}
@@ -618,7 +668,9 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                     disabled={!table.getCanPreviousPage()}
                                 >
                                     <ChevronLeftIcon className="size-4" />
-                                    <span className="sr-only">Previous page</span>
+                                    <span className="sr-only">
+                                        Previous page
+                                    </span>
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -635,7 +687,9 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                                     size="icon"
                                     className="size-8"
                                     onClick={() =>
-                                        table.setPageIndex(table.getPageCount() - 1)
+                                        table.setPageIndex(
+                                            table.getPageCount() - 1,
+                                        )
                                     }
                                     disabled={!table.getCanNextPage()}
                                 >

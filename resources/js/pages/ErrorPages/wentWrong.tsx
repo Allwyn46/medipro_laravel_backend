@@ -1,8 +1,10 @@
+import { Head } from "@inertiajs/react";
 import { AlertCircle } from "lucide-react";
 
 export default function WentWrong() {
     return (
         <div className="flex min-h-svh w-full items-center justify-center p-6">
+            <Head title="Error" />
             <div className="flex w-full max-w-sm flex-col items-center text-center">
                 <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-red-50">
                     <AlertCircle className="size-6 text-red-500" />

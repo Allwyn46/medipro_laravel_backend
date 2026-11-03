@@ -1,6 +1,12 @@
 <?php
 
+use App\Models\Lead;
 use App\Models\User;
+use Database\Seeders\LeadSeeder;
+
+beforeEach(function () {
+    (new LeadSeeder)->run();
+});
 
 test('unauthenticated users are redirected to login', function () {
     $this->get(route('leads.index'))->assertRedirect(route('login'));
@@ -49,4 +55,21 @@ test('authenticated users can view pipeline page', function () {
         ->component('pipeline')
         ->has('leads')
     );
+});
+
+test('database has Michael Chen lead with activities', function () {
+    $lead = Lead::with('activities')->find(2);
+
+    expect($lead)->not->toBeNull()
+        ->and($lead->name)->toBe('Michael Chen')
+        ->and($lead->email)->toBe('michael.chen@example.com')
+        ->and($lead->phone)->toBe('+1 (555) 345-6789')
+        ->and($lead->service)->toBe('Orthodontics & Aligners')
+        ->and($lead->status)->toBe('Consultation Scheduled')
+        ->and($lead->priority)->toBe('High')
+        ->and((int) $lead->value)->toBe(4500)
+        ->and($lead->doctor)->toBe('Dr. Jamik Tashpulatov')
+        ->and($lead->activities)->toHaveCount(2);
+
+    expect($lead->activities->first()->title)->toBe('Consultation Booking Call');
 });

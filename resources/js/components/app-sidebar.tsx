@@ -28,6 +28,7 @@ import {
     FileChartColumnIcon,
     FileIcon,
     CommandIcon,
+    StethoscopeIcon,
 } from "lucide-react";
 
 const data = {
@@ -154,9 +155,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             className="data-[slot=sidebar-menu-button]:p-1.5!"
-                            render={<a href="#" />}
+                            render={<a href="/dashboard" />}
                         >
-                            <CommandIcon className="size-5!" />
+                            <div className="flex size-7 items-center justify-center rounded-md bg-emerald-600 text-white shadow-xs">
+                                <StethoscopeIcon className="size-4" />
+                            </div>
                             <span className="text-base font-semibold">
                                 Medi Pro
                             </span>
