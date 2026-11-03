@@ -5,6 +5,8 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PipelineController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', fn () => inertia('welcome'))->name('home');
+Route::get('/staff', fn () => auth()->check() ? redirect()->route('dashboard') : redirect()->route('login'))->name('staff.portal');
 Route::inertia('/error', 'ErrorPages/wentWrong')->name('error');
 
 // AUTH ROUTES

@@ -29,12 +29,14 @@ import {
     CalendarIcon,
     ClockIcon,
     PhoneIcon,
-    MailIcon,
     MapPinIcon,
     CheckCircle2Icon,
     UserCheckIcon,
     ExternalLinkIcon,
+    SparklesIcon,
+    RefreshCwIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,7 +68,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Appointment, AppointmentStatus, AppointmentType } from "@/types/appointment";
-import { INITIAL_APPOINTMENTS } from "@/types/appointment";
+import { INITIAL_APPOINTMENTS, INITIAL_PENDING_APPOINTMENTS } from "@/types/appointment";
 
 const features = tableFeatures({
     columnFilteringFeature,
@@ -93,6 +95,8 @@ function getStatusBadgeClass(status: AppointmentStatus) {
             return "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
         case "Cancelled":
             return "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800";
+        case "Pending":
+            return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
     }
 }
 
@@ -255,6 +259,9 @@ const columns = columnHelper.columns([
                     {status === "Confirmed" && (
                         <CheckCircle2Icon className="size-3 mr-1 text-emerald-500" />
                     )}
+                    {status === "Pending" && (
+                        <span className="size-1.5 rounded-full bg-amber-500 animate-pulse mr-1" />
+                    )}
                     {status}
                 </Badge>
             );
@@ -288,14 +295,18 @@ const columns = columnHelper.columns([
                         )}
                         <DropdownMenuItem
                             onClick={() => {
-                                alert(`Checking in ${apt.patientName}`);
+                                toast.success(`Checked in ${apt.patientName}`, {
+                                    description: `Assigned room: ${apt.room}`,
+                                });
                             }}
                         >
                             Patient Check-In
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => {
-                                alert(`Calling ${apt.patientName} at ${apt.patientPhone}`);
+                                toast.info(`Calling ${apt.patientName}`, {
+                                    description: `Phone: ${apt.patientPhone}`,
+                                });
                             }}
                         >
                             Call Patient
@@ -303,7 +314,9 @@ const columns = columnHelper.columns([
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             onClick={() => {
-                                alert(`Rescheduling appointment for ${apt.patientName}`);
+                                toast.info(`Rescheduling appointment`, {
+                                    description: `Current slot: ${apt.dateTimeFormatted}`,
+                                });
                             }}
                         >
                             Reschedule Slot
@@ -320,7 +333,116 @@ export function AppointmentsTable({
 }: {
     appointments?: Appointment[];
 }) {
-    const [data, setData] = React.useState<Appointment[]>(appointments);
+    const [data, setData] = React.useState<Appointment[]>(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem("medi_confirmed_appointments");
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch (e) {
+                    console.error("Failed to parse stored confirmed appointments", e);
+                }
+            }
+        }
+        return appointments;
+    });
+
+    const [pendingAppointments, setPendingAppointments] = React.useState<Appointment[]>(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem("medi_pending_appointments");
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch (e) {
+                    console.error("Failed to parse stored pending appointments", e);
+                }
+            }
+        }
+        return INITIAL_PENDING_APPOINTMENTS;
+    });
+
+    // Listen to changes from client booking page (/welcome) or other browser tabs
+    React.useEffect(() => {
+        const handleUpdate = () => {
+            if (typeof window !== "undefined") {
+                const storedPending = localStorage.getItem("medi_pending_appointments");
+                if (storedPending) {
+                    try {
+                        setPendingAppointments(JSON.parse(storedPending));
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+                const storedConfirmed = localStorage.getItem("medi_confirmed_appointments");
+                if (storedConfirmed) {
+                    try {
+                        setData(JSON.parse(storedConfirmed));
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener("medi_appointments_updated", handleUpdate);
+        window.addEventListener("storage", handleUpdate);
+
+        return () => {
+            window.removeEventListener("medi_appointments_updated", handleUpdate);
+            window.removeEventListener("storage", handleUpdate);
+        };
+    }, []);
+
+    const handleConfirmAppointment = (apt: Appointment) => {
+        const confirmedItem: Appointment = {
+            ...apt,
+            status: "Confirmed",
+            room: apt.room || "Consultation Suite 1",
+            duration: apt.duration || "45 mins",
+        };
+
+        const updatedPending = pendingAppointments.filter((p) => p.id !== apt.id);
+        const updatedData = [confirmedItem, ...data];
+
+        setPendingAppointments(updatedPending);
+        setData(updatedData);
+
+        if (typeof window !== "undefined") {
+            localStorage.setItem("medi_pending_appointments", JSON.stringify(updatedPending));
+            localStorage.setItem("medi_confirmed_appointments", JSON.stringify(updatedData));
+            window.dispatchEvent(new Event("medi_appointments_updated"));
+        }
+
+        toast.success("Appointment Confirmed!", {
+            description: `${apt.patientName} scheduled with ${apt.doctor} for ${apt.dateTimeFormatted || `${apt.date} at ${apt.time}`}. Moved to daily schedule.`,
+        });
+    };
+
+    const handleDeclineAppointment = (apt: Appointment) => {
+        const updatedPending = pendingAppointments.filter((p) => p.id !== apt.id);
+        setPendingAppointments(updatedPending);
+
+        if (typeof window !== "undefined") {
+            localStorage.setItem("medi_pending_appointments", JSON.stringify(updatedPending));
+            window.dispatchEvent(new Event("medi_appointments_updated"));
+        }
+
+        toast.info("Appointment Request Declined", {
+            description: `Declined booking request from ${apt.patientName}.`,
+        });
+    };
+
+    const handleResetDemo = () => {
+        setPendingAppointments(INITIAL_PENDING_APPOINTMENTS);
+        if (typeof window !== "undefined") {
+            localStorage.setItem("medi_pending_appointments", JSON.stringify(INITIAL_PENDING_APPOINTMENTS));
+            window.dispatchEvent(new Event("medi_appointments_updated"));
+        }
+        toast.success("Demo appointments reset", {
+            description: "Reloaded 3 demo pending patient requests.",
+        });
+    };
+
     const [tabFilter, setTabFilter] = React.useState<"all" | "today" | "tomorrow">("all");
     const [searchQuery, setSearchQuery] = React.useState("");
     const [doctorFilter, setDoctorFilter] = React.useState("ALL");
@@ -384,220 +506,399 @@ export function AppointmentsTable({
     });
 
     return (
-        <div className="flex flex-col gap-4 px-4 lg:px-6">
-            <div className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs">
-                {/* Header title & controls */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
-                    <div>
-                        <h2 className="text-xl font-semibold tracking-tight text-foreground flex items-center gap-2">
-                            <CalendarIcon className="size-5 text-primary" />
-                            New Appointments & Daily Schedule
-                        </h2>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Real-time schedule of patient consultations, clinical procedures, and specialist bookings.
-                        </p>
-                    </div>
+        <div className="flex flex-col gap-6 px-4 lg:px-6">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                {/* Left: Main Schedule Table (col-span-8) */}
+                <div className="xl:col-span-8 flex flex-col gap-4 min-w-0">
+                    <div className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs">
+                        {/* Header title & controls */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
+                            <div>
+                                <h2 className="text-xl font-semibold tracking-tight text-foreground flex items-center gap-2">
+                                    <CalendarIcon className="size-5 text-primary" />
+                                    New Appointments & Daily Schedule
+                                </h2>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    Real-time schedule of patient consultations, clinical procedures, and specialist bookings.
+                                </p>
+                            </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            render={<Link href="/leads" prefetch />}
-                        >
-                            View All Leads
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            render={<Link href="/pipeline" prefetch />}
-                        >
-                            View Pipeline
-                        </Button>
-                        <Button
-                            size="sm"
-                            className="bg-primary text-primary-foreground"
-                            onClick={() => alert("Open New Booking Modal")}
-                        >
-                            <PlusIcon className="size-4 mr-1" />
-                            Book Appointment
-                        </Button>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    render={<Link href="/leads" prefetch />}
+                                >
+                                    View All Leads
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    render={<Link href="/pipeline" prefetch />}
+                                >
+                                    View Pipeline
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    className="bg-primary text-primary-foreground"
+                                    render={<Link href="/" target="_blank" />}
+                                >
+                                    <PlusIcon className="size-4 mr-1" />
+                                    Book as Patient
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Filter and Tab Bar */}
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            <Tabs
+                                value={tabFilter}
+                                onValueChange={(val) => setTabFilter(val as any)}
+                                className="w-fit"
+                            >
+                                <TabsList className="h-9">
+                                    <TabsTrigger value="all" className="text-xs">
+                                        All ({data.length})
+                                    </TabsTrigger>
+                                    <TabsTrigger value="today" className="text-xs">
+                                        Today ({data.filter((a) => a.date === "Today").length})
+                                    </TabsTrigger>
+                                    <TabsTrigger value="tomorrow" className="text-xs">
+                                        Tomorrow ({data.filter((a) => a.date === "Tomorrow").length})
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="relative w-full sm:w-56">
+                                    <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search patient, procedure..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-9 text-xs h-9"
+                                    />
+                                </div>
+
+                                <Select
+                                    value={doctorFilter}
+                                    onValueChange={(val) => setDoctorFilter(val ?? "ALL")}
+                                >
+                                    <SelectTrigger className="w-40 h-9 text-xs">
+                                        <SelectValue placeholder="All Doctors" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="ALL">All Doctors</SelectItem>
+                                            <SelectItem value="Dr. Eddie Lake">Dr. Eddie Lake</SelectItem>
+                                            <SelectItem value="Dr. Jamik Tashpulatov">
+                                                Dr. Jamik Tashpulatov
+                                            </SelectItem>
+                                            <SelectItem value="Dr. Emily Whalen">
+                                                Dr. Emily Whalen
+                                            </SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                        render={<Button variant="outline" size="sm" className="h-9 text-xs" />}
+                                    >
+                                        <Columns3Icon className="size-3.5 mr-1.5" />
+                                        Columns
+                                        <ChevronDownIcon className="size-3 ml-1 text-muted-foreground" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-40">
+                                        {table
+                                            .getAllColumns()
+                                            .filter(
+                                                (column) =>
+                                                    typeof column.accessorFn !== "undefined" &&
+                                                    column.getCanHide()
+                                            )
+                                            .map((column) => (
+                                                <DropdownMenuCheckboxItem
+                                                    key={column.id}
+                                                    className="capitalize text-xs"
+                                                    checked={column.getIsVisible()}
+                                                    onCheckedChange={(value) =>
+                                                        column.toggleVisibility(!!value)
+                                                    }
+                                                >
+                                                    {column.id}
+                                                </DropdownMenuCheckboxItem>
+                                            ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </div>
+
+                        {/* TanStack Table View with overflow-x-auto */}
+                        <div className="overflow-x-auto rounded-lg border">
+                            <Table className="min-w-[640px]">
+                                <TableHeader className="bg-muted/50">
+                                    {table.getHeaderGroups().map((headerGroup) => (
+                                        <TableRow key={headerGroup.id}>
+                                            {headerGroup.headers.map((header) => (
+                                                <TableHead
+                                                    key={header.id}
+                                                    colSpan={header.colSpan}
+                                                    className="text-xs font-semibold text-foreground/80 py-2.5"
+                                                >
+                                                    {header.isPlaceholder ? null : (
+                                                        <FlexRender header={header} />
+                                                    )}
+                                                </TableHead>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </TableHeader>
+                                <TableBody>
+                                    {table.getRowModel().rows?.length ? (
+                                        table.getRowModel().rows.map((row) => (
+                                            <TableRow
+                                                key={row.id}
+                                                data-state={
+                                                    row.getIsSelected() && "selected"
+                                                }
+                                                className="hover:bg-muted/30 transition-colors"
+                                            >
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        className="py-3 text-xs"
+                                                    >
+                                                        <FlexRender cell={cell} />
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={columns.length}
+                                                className="h-28 text-center text-muted-foreground"
+                                            >
+                                                No appointments scheduled matching current filters.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        {/* Table Footer / Pagination */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-1 py-1">
+                            <div className="text-xs text-muted-foreground">
+                                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                                {table.getFilteredRowModel().rows.length} appointment(s) selected.
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <div className="text-xs font-medium">
+                                    Page {table.state.pagination.pageIndex + 1} of{" "}
+                                    {Math.max(1, table.getPageCount())}
+                                </div>
+
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        onClick={() => table.previousPage()}
+                                        disabled={!table.getCanPreviousPage()}
+                                    >
+                                        <ChevronLeftIcon className="size-3.5 mr-1" />
+                                        Previous
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        onClick={() => table.nextPage()}
+                                        disabled={!table.getCanNextPage()}
+                                    >
+                                        Next
+                                        <ChevronRightIcon className="size-3.5 ml-1" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Filter and Tab Bar */}
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <Tabs
-                        value={tabFilter}
-                        onValueChange={(val) => setTabFilter(val as any)}
-                        className="w-fit"
-                    >
-                        <TabsList className="h-9">
-                            <TabsTrigger value="all" className="text-xs">
-                                All ({data.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="today" className="text-xs">
-                                Today ({data.filter((a) => a.date === "Today").length})
-                            </TabsTrigger>
-                            <TabsTrigger value="tomorrow" className="text-xs">
-                                Tomorrow ({data.filter((a) => a.date === "Tomorrow").length})
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="relative w-full sm:w-64">
-                            <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search patient, procedure, room..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 text-xs h-9"
-                            />
-                        </div>
-
-                        <Select
-                            value={doctorFilter}
-                            onValueChange={(val) => setDoctorFilter(val ?? "ALL")}
-                        >
-                            <SelectTrigger className="w-44 h-9 text-xs">
-                                <SelectValue placeholder="All Doctors" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="ALL">All Doctors</SelectItem>
-                                    <SelectItem value="Dr. Eddie Lake">Dr. Eddie Lake</SelectItem>
-                                    <SelectItem value="Dr. Jamik Tashpulatov">
-                                        Dr. Jamik Tashpulatov
-                                    </SelectItem>
-                                    <SelectItem value="Dr. Emily Whalen">
-                                        Dr. Emily Whalen
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger
-                                render={<Button variant="outline" size="sm" className="h-9 text-xs" />}
-                            >
-                                <Columns3Icon className="size-3.5 mr-1.5" />
-                                Columns
-                                <ChevronDownIcon className="size-3 ml-1 text-muted-foreground" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                                {table
-                                    .getAllColumns()
-                                    .filter(
-                                        (column) =>
-                                            typeof column.accessorFn !==
-                                                "undefined" &&
-                                            column.getCanHide()
-                                    )
-                                    .map((column) => (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            className="capitalize text-xs"
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
+                {/* Right: Confirm Appointments Side Section (col-span-4) */}
+                <div className="xl:col-span-4 flex flex-col gap-4 min-w-0">
+                    <div className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs">
+                        <div className="flex items-start justify-between border-b pb-4 gap-2">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                                    <UserCheckIcon className="size-5" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-base font-semibold tracking-tight text-foreground">
+                                            Confirm Appointments
+                                        </h3>
+                                        <Badge
+                                            variant={pendingAppointments.length > 0 ? "default" : "secondary"}
+                                            className={
+                                                pendingAppointments.length > 0
+                                                    ? "bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-semibold px-2 py-0.5"
+                                                    : "text-[10px]"
                                             }
                                         >
-                                            {column.id}
-                                        </DropdownMenuCheckboxItem>
-                                    ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </div>
+                                            {pendingAppointments.length} Pending
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        Incoming client bookings awaiting confirmation
+                                    </p>
+                                </div>
+                            </div>
 
-                {/* TanStack Table View */}
-                <div className="overflow-hidden rounded-lg border">
-                    <Table>
-                        <TableHeader className="bg-muted/50">
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => (
-                                        <TableHead
-                                            key={header.id}
-                                            colSpan={header.colSpan}
-                                            className="text-xs font-semibold text-foreground/80 py-2.5"
-                                        >
-                                            {header.isPlaceholder ? null : (
-                                                <FlexRender header={header} />
-                                            )}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableHeader>
-                        <TableBody>
-                            {table.getRowModel().rows?.length ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        data-state={
-                                            row.getIsSelected() && "selected"
-                                        }
-                                        className="hover:bg-muted/30 transition-colors"
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell
-                                                key={cell.id}
-                                                className="py-3 text-xs"
-                                            >
-                                                <FlexRender cell={cell} />
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={columns.length}
-                                        className="h-28 text-center text-muted-foreground"
-                                    >
-                                        No appointments scheduled matching current filters.
-                                    </TableCell>
-                                </TableRow>
+                            {pendingAppointments.length === 0 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleResetDemo}
+                                    className="h-7 text-xs text-muted-foreground hover:text-foreground shrink-0 px-2"
+                                    title="Reload sample bookings"
+                                >
+                                    <RefreshCwIcon className="size-3 mr-1" />
+                                    Reset
+                                </Button>
                             )}
-                        </TableBody>
-                    </Table>
-                </div>
-
-                {/* Table Footer / Pagination */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-1 py-1">
-                    <div className="text-xs text-muted-foreground">
-                        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                        {table.getFilteredRowModel().rows.length} appointment(s) selected.
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="text-xs font-medium">
-                            Page {table.state.pagination.pageIndex + 1} of{" "}
-                            {Math.max(1, table.getPageCount())}
                         </div>
 
-                        <div className="flex items-center gap-1">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs"
-                                onClick={() => table.previousPage()}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                <ChevronLeftIcon className="size-3.5 mr-1" />
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs"
-                                onClick={() => table.nextPage()}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                Next
-                                <ChevronRightIcon className="size-3.5 ml-1" />
-                            </Button>
+                        {pendingAppointments.length > 0 ? (
+                            <div className="flex flex-col gap-3.5 max-h-[760px] overflow-y-auto pr-0.5">
+                                {pendingAppointments.map((apt) => (
+                                    <div
+                                        key={apt.id}
+                                        className="group relative flex flex-col gap-3 rounded-lg border bg-muted/20 hover:bg-muted/30 p-3.5 transition-all hover:border-primary/40 hover:shadow-xs"
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary uppercase">
+                                                    {apt.patientName.slice(0, 2)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <h4 className="text-xs font-bold text-foreground truncate">
+                                                        {apt.patientName}
+                                                    </h4>
+                                                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                        <PhoneIcon className="size-3 shrink-0" />
+                                                        <span className="truncate">{apt.patientPhone}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Badge
+                                                variant="outline"
+                                                className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 shrink-0 font-medium"
+                                            >
+                                                <span className="size-1.5 rounded-full bg-amber-500 mr-1 animate-pulse" />
+                                                Needs Review
+                                            </Badge>
+                                        </div>
+
+                                        <div className="rounded-md bg-background/80 border p-2.5 text-xs flex flex-col gap-1.5">
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <span className="text-muted-foreground">Service:</span>
+                                                <span className="font-semibold text-foreground text-right truncate max-w-[190px]">
+                                                    {apt.service}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <span className="text-muted-foreground">Doctor:</span>
+                                                <span className="font-medium text-foreground text-right truncate max-w-[190px]">
+                                                    {apt.doctor}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <span className="text-muted-foreground">Requested Time:</span>
+                                                <span className="font-semibold text-primary text-right flex items-center gap-1">
+                                                    <ClockIcon className="size-3" />
+                                                    {apt.dateTimeFormatted || `${apt.date} at ${apt.time}`}
+                                                </span>
+                                            </div>
+                                            {apt.notes && (
+                                                <div className="pt-1.5 mt-0.5 border-t border-border/50 text-[11px] text-muted-foreground italic line-clamp-2">
+                                                    &ldquo;{apt.notes}&rdquo;
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between text-[10px] text-muted-foreground px-0.5">
+                                            <span className="flex items-center gap-1 font-medium">
+                                                <SparklesIcon className="size-3 text-primary" />
+                                                {apt.source || "Website Booking"}
+                                            </span>
+                                            <span>{apt.requestedAt || "Just now"}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 pt-1 border-t">
+                                            <Button
+                                                size="sm"
+                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-8 shadow-xs"
+                                                onClick={() => handleConfirmAppointment(apt)}
+                                            >
+                                                <CheckCircle2Icon className="size-3.5 mr-1.5" />
+                                                Confirm Appointment
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 px-3"
+                                                onClick={() => handleDeclineAppointment(apt)}
+                                                title="Decline request"
+                                            >
+                                                Decline
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-lg border border-dashed bg-muted/20">
+                                <div className="flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 mb-3">
+                                    <CheckCircle2Icon className="size-6" />
+                                </div>
+                                <h4 className="text-sm font-semibold text-foreground">
+                                    All Appointments Confirmed!
+                                </h4>
+                                <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                                    There are no pending booking requests right now. When a patient books an appointment via the client portal, it will appear here immediately for confirmation.
+                                </p>
+                                <div className="flex flex-col sm:flex-row items-center gap-2 mt-4 w-full justify-center">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs h-8"
+                                        render={<Link href="/" prefetch />}
+                                    >
+                                        Open Client Portal
+                                        <ExternalLinkIcon className="size-3 ml-1.5" />
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        className="text-xs h-8"
+                                        onClick={handleResetDemo}
+                                    >
+                                        Reset Demo Requests
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="rounded-lg bg-muted/40 p-3 text-[11px] text-muted-foreground flex items-center justify-between border">
+                            <span className="font-medium text-foreground">Client Portal:</span>
+                            <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Real-Time Sync Active
+                            </span>
                         </div>
                     </div>
                 </div>

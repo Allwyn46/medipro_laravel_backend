@@ -3,7 +3,8 @@ export type AppointmentStatus =
     | 'In Progress'
     | 'Scheduled'
     | 'Completed'
-    | 'Cancelled';
+    | 'Cancelled'
+    | 'Pending';
 
 export type AppointmentType =
     | 'Initial Consultation'
@@ -27,6 +28,8 @@ export interface Appointment {
     duration: string;
     leadId?: number;
     notes?: string;
+    source?: string;
+    requestedAt?: string;
 }
 
 export const INITIAL_APPOINTMENTS: Appointment[] = [
@@ -199,5 +202,62 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
         duration: '60 mins',
         leadId: 8,
         notes: 'Session 1 of 10-week spinal rehabilitation protocol.',
+    },
+];
+
+export const INITIAL_PENDING_APPOINTMENTS: Appointment[] = [
+    {
+        id: 101,
+        patientName: 'Alex Henderson',
+        patientEmail: 'alex.henderson@example.com',
+        patientPhone: '+1 (555) 321-9876',
+        service: 'Dental Implants & Cosmetic',
+        doctor: 'Dr. Eddie Lake',
+        date: 'Today',
+        time: '03:00 PM',
+        dateTimeFormatted: 'Today at 03:00 PM',
+        status: 'Pending',
+        type: 'Initial Consultation',
+        room: 'Dental Suite 1',
+        duration: '45 mins',
+        notes: 'Interested in upper full-arch smile makeover and veneer consultation.',
+        source: 'Website Booking',
+        requestedAt: '12 mins ago',
+    },
+    {
+        id: 102,
+        patientName: 'Hannah Vance',
+        patientEmail: 'hannah.v@example.com',
+        patientPhone: '+1 (555) 765-4321',
+        service: 'Orthodontics & Clear Aligners',
+        doctor: 'Dr. Jamik Tashpulatov',
+        date: 'Tomorrow',
+        time: '11:30 AM',
+        dateTimeFormatted: 'Tomorrow at 11:30 AM',
+        status: 'Pending',
+        type: 'Initial Consultation',
+        room: 'Ortho Studio B',
+        duration: '30 mins',
+        notes: 'Submitted online request for digital bite scan & transparent aligners evaluation.',
+        source: 'Website Booking',
+        requestedAt: '35 mins ago',
+    },
+    {
+        id: 103,
+        patientName: 'Carlos Ramirez',
+        patientEmail: 'carlos.r@example.com',
+        patientPhone: '+1 (555) 987-6543',
+        service: 'Cardiology & Heart Health',
+        doctor: 'Dr. Emily Whalen',
+        date: 'Tomorrow',
+        time: '04:15 PM',
+        dateTimeFormatted: 'Tomorrow at 04:15 PM',
+        status: 'Pending',
+        type: 'Follow-up',
+        room: 'Cardiology 2',
+        duration: '30 mins',
+        notes: 'Referred for follow-up blood pressure review and resting ECG.',
+        source: 'Website Booking',
+        requestedAt: '1 hour ago',
     },
 ];
