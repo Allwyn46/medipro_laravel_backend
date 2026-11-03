@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SectionCards, type MetricCardItem } from "@/components/section-cards";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -337,6 +338,44 @@ export default function PipelinePage({
         onPaginationChange: setPagination,
     });
 
+    const pipelineMetricCards: MetricCardItem[] = React.useMemo(
+        () => [
+            {
+                title: "Total In Pipeline",
+                value: `${leads.length} Leads`,
+                badgeText: "+8.3%",
+                badgeTrend: "up",
+                footerTrendText: "4 new inquiries this week",
+                footerSubtext: "Active across all pipeline stages",
+            },
+            {
+                title: "Pipeline Total Value",
+                value: `$${totalPipelineValue.toLocaleString()}`,
+                badgeText: "+14.2%",
+                badgeTrend: "up",
+                footerTrendText: "High-value procedure plans",
+                footerSubtext: "Projected clinical revenue",
+            },
+            {
+                title: "Consultations Booked",
+                value: `${scheduledConsultations}`,
+                badgeText: "+25.0%",
+                badgeTrend: "up",
+                footerTrendText: "3 sessions upcoming this week",
+                footerSubtext: "Confirmed specialist visits",
+            },
+            {
+                title: "Won Treatments Value",
+                value: `$${wonValue.toLocaleString()}`,
+                badgeText: "+16.5%",
+                badgeTrend: "up",
+                footerTrendText: "Steady patient conversion",
+                footerSubtext: "Enrolled in active treatment",
+            },
+        ],
+        [leads.length, totalPipelineValue, scheduledConsultations, wonValue]
+    );
+
     return (
         <Layout title="Pipeline">
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -362,44 +401,10 @@ export default function PipelinePage({
                 </div>
 
                 {/* Pipeline Stats */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Total In Pipeline</CardDescription>
-                            <UsersIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            {leads.length} Leads
-                        </CardTitle>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Pipeline Total Value</CardDescription>
-                            <DollarSignIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            ${totalPipelineValue.toLocaleString()}
-                        </CardTitle>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Consultations Booked</CardDescription>
-                            <CalendarCheckIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            {scheduledConsultations}
-                        </CardTitle>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Won Treatments Value</CardDescription>
-                            <TrophyIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            ${wonValue.toLocaleString()}
-                        </CardTitle>
-                    </Card>
-                </div>
+                <SectionCards
+                    items={pipelineMetricCards}
+                    className="px-0 lg:px-0"
+                />
 
                 {/* Tabs: Kanban Board View vs Table View (both interactive) */}
                 <Tabs defaultValue="board" className="flex flex-col gap-4">

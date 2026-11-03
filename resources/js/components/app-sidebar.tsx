@@ -158,7 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         >
                             <CommandIcon className="size-5!" />
                             <span className="text-base font-semibold">
-                                Acme Inc.
+                                Medi Pro
                             </span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

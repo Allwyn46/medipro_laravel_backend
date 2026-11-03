@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SectionCards, type MetricCardItem } from "@/components/section-cards";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -357,6 +358,44 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
         onPaginationChange: setPagination,
     });
 
+    const leadsMetricCards: MetricCardItem[] = React.useMemo(
+        () => [
+            {
+                title: "Total Leads",
+                value: `${totalLeads} Leads`,
+                badgeText: "+12.5%",
+                badgeTrend: "up",
+                footerTrendText: "Steady patient inquiries",
+                footerSubtext: "All registered clinic prospects",
+            },
+            {
+                title: "Active Pipeline Value",
+                value: `$${totalPipelineValue.toLocaleString()}`,
+                badgeText: "+10.8%",
+                badgeTrend: "up",
+                footerTrendText: "Estimated procedure revenue",
+                footerSubtext: "Across all clinical specialties",
+            },
+            {
+                title: "Scheduled Consultations",
+                value: `${scheduledCount}`,
+                badgeText: "+20.0%",
+                badgeTrend: "up",
+                footerTrendText: "3 confirmed for this week",
+                footerSubtext: "Doctor consultations booked",
+            },
+            {
+                title: "Won Patients",
+                value: `${wonCount}`,
+                badgeText: "+15.0%",
+                badgeTrend: "up",
+                footerTrendText: "High patient enrollment",
+                footerSubtext: "Treatment plans accepted",
+            },
+        ],
+        [totalLeads, totalPipelineValue, scheduledCount, wonCount]
+    );
+
     return (
         <Layout title="All Leads">
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -385,44 +424,7 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                 </div>
 
                 {/* Metrics Cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Total Leads</CardDescription>
-                            <UsersIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            {totalLeads}
-                        </CardTitle>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Active Value</CardDescription>
-                            <DollarSignIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            ${totalPipelineValue.toLocaleString()}
-                        </CardTitle>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Scheduled Consultations</CardDescription>
-                            <CalendarCheckIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            {scheduledCount}
-                        </CardTitle>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardDescription>Won Patients</CardDescription>
-                            <UserCheckIcon className="size-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardTitle className="text-2xl font-bold tabular-nums">
-                            {wonCount}
-                        </CardTitle>
-                    </Card>
-                </div>
+                <SectionCards items={leadsMetricCards} className="px-0 lg:px-0" />
 
                 {/* TanStack Table Section */}
                 <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs">
