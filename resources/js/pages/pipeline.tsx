@@ -24,7 +24,7 @@ import {
     ChevronRightIcon,
     KanbanIcon,
     TablePropertiesIcon,
-    DollarSignIcon,
+    IndianRupeeIcon,
     UsersIcon,
     CalendarCheckIcon,
     TrophyIcon,
@@ -246,7 +246,7 @@ const pipelineColumns = columnHelper.columns([
         ),
         cell: ({ row }) => (
             <div className="text-right font-medium tabular-nums text-foreground">
-                ${row.original.value.toLocaleString()}
+                ₹{row.original.value.toLocaleString()}
             </div>
         ),
     }),
@@ -350,7 +350,7 @@ export default function PipelinePage({
             },
             {
                 title: "Pipeline Total Value",
-                value: `$${totalPipelineValue.toLocaleString()}`,
+                value: `₹${totalPipelineValue.toLocaleString()}`,
                 badgeText: "+14.2%",
                 badgeTrend: "up",
                 footerTrendText: "High-value procedure plans",
@@ -366,7 +366,7 @@ export default function PipelinePage({
             },
             {
                 title: "Won Treatments Value",
-                value: `$${wonValue.toLocaleString()}`,
+                value: `₹${wonValue.toLocaleString()}`,
                 badgeText: "+16.5%",
                 badgeTrend: "up",
                 footerTrendText: "Steady patient conversion",
@@ -466,7 +466,7 @@ export default function PipelinePage({
                                         </div>
 
                                         <div className="text-[11px] text-muted-foreground tabular-nums">
-                                            ${stageTotal.toLocaleString()} total
+                                            ₹{stageTotal.toLocaleString()} total
                                         </div>
 
                                         {/* Cards list */}
@@ -500,7 +500,7 @@ export default function PipelinePage({
 
                                                     <div className="flex items-center justify-between pt-1 border-t text-[11px]">
                                                         <span className="font-bold text-foreground tabular-nums">
-                                                            ${lead.value.toLocaleString()}
+                                                            ₹{lead.value.toLocaleString()}
                                                         </span>
                                                         <span className="text-muted-foreground truncate max-w-[90px]">
                                                             {lead.doctor.replace("Dr. ", "")}

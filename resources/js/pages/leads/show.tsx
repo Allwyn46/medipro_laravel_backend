@@ -20,7 +20,7 @@ import {
     MailIcon,
     CalendarIcon,
     UserIcon,
-    DollarSignIcon,
+    IndianRupeeIcon,
     TagIcon,
     ClockIcon,
     PlusIcon,
@@ -425,11 +425,11 @@ export default function SingleLeadPage({
                                 </div>
                                 <div className="flex items-center justify-between py-1 border-b">
                                     <span className="flex items-center gap-1.5 text-muted-foreground">
-                                        <DollarSignIcon className="size-4" />
+                                        <IndianRupeeIcon className="size-4" />
                                         Estimated Value
                                     </span>
                                     <span className="font-bold text-foreground text-sm tabular-nums">
-                                        ${lead.value.toLocaleString()}
+                                        ₹{lead.value.toLocaleString()}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between py-1 border-b">

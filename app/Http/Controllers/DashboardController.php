@@ -33,7 +33,7 @@ class DashboardController extends Controller
         $metrics = [
             [
                 'title' => 'Total Clinic Revenue',
-                'value' => '$'.number_format($allLeadsValue, 2),
+                'value' => '₹'.number_format($allLeadsValue, 2),
                 'badgeText' => '+14.5%',
                 'badgeTrend' => 'up',
                 'footerTrendText' => 'Trending up this month',

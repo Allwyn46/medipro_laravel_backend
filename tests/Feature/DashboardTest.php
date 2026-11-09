@@ -42,7 +42,7 @@ test('dashboard metrics match database totals', function () {
     $metrics = $response->viewData('page')['props']['metrics'];
 
     expect($metrics[0]['title'])->toBe('Total Clinic Revenue')
-        ->and($metrics[0]['value'])->toBe('$'.number_format($totalRevenue, 2))
+        ->and($metrics[0]['value'])->toBe('₹'.number_format($totalRevenue, 2))
         ->and($metrics[2]['title'])->toBe('Active Patient Leads')
         ->and($metrics[2]['value'])->toBe((string) $activeLeadsCount);
 });

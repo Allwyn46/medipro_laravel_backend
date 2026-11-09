@@ -29,7 +29,7 @@ import {
     PlusIcon,
     ArrowUpDownIcon,
     UserCheckIcon,
-    DollarSignIcon,
+    IndianRupeeIcon,
     CalendarCheckIcon,
     UsersIcon,
     ExternalLinkIcon,
@@ -237,7 +237,7 @@ const columns = columnHelper.columns([
         ),
         cell: ({ row }) => (
             <div className="text-right font-medium tabular-nums text-foreground">
-                ${row.original.value.toLocaleString()}
+                ₹{row.original.value.toLocaleString()}
             </div>
         ),
     }),
@@ -384,7 +384,7 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
             },
             {
                 title: "Active Pipeline Value",
-                value: `$${totalPipelineValue.toLocaleString()}`,
+                value: `₹${totalPipelineValue.toLocaleString()}`,
                 badgeText: "+10.8%",
                 badgeTrend: "up",
                 footerTrendText: "Estimated procedure revenue",
