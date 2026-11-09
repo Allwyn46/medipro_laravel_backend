@@ -104,6 +104,46 @@ function isSameDate(aptDate: string, selectedDate: string): boolean {
     return false;
 }
 
+function parseTimeToMinutes(timeStr: string): number {
+    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return -1;
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3].toUpperCase();
+
+    if (period === "PM" && hours < 12) {
+        hours += 12;
+    } else if (period === "AM" && hours === 12) {
+        hours = 0;
+    }
+
+    return hours * 60 + minutes;
+}
+
+function isSlotPast(timeStr: string, dateStr: string): boolean {
+    const now = new Date();
+    const todayY = now.getFullYear();
+    const todayM = String(now.getMonth() + 1).padStart(2, "0");
+    const todayD = String(now.getDate()).padStart(2, "0");
+    const todayStr = `${todayY}-${todayM}-${todayD}`;
+
+    const effectiveDate = dateStr === "Today" ? todayStr : dateStr;
+
+    if (effectiveDate < todayStr) {
+        return true;
+    }
+
+    if (effectiveDate > todayStr) {
+        return false;
+    }
+
+    const slotMinutes = parseTimeToMinutes(timeStr);
+    if (slotMinutes === -1) return false;
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    return slotMinutes <= currentMinutes;
+}
+
 const SERVICES = [
     {
         title: "Dental Implants & Cosmetic",
@@ -287,7 +327,8 @@ export default function Welcome({
         const defaultDoctor = "Dr. Eddie Lake";
         const initialSlot =
             ALL_TIME_SLOTS.find((s) => {
-                return !bookedSlots.some(
+                const past = isSlotPast(s.time, todayStr);
+                const booked = bookedSlots.some(
                     (apt) =>
                         apt.status !== "Cancelled" &&
                         apt.doctor.toLowerCase() ===
@@ -295,7 +336,8 @@ export default function Welcome({
                         (apt.date === "Today" || apt.date === todayStr) &&
                         normalizeTime(apt.time) === normalizeTime(s.time),
                 );
-            })?.time || "09:00 AM";
+                return !past && !booked;
+            })?.time || "";
 
         return {
             patientName: "",
@@ -309,16 +351,21 @@ export default function Welcome({
         };
     });
 
-    // Auto-select first available slot if currently selected slot becomes booked
+    // Auto-select first available upcoming slot if currently selected slot becomes booked or has passed
     React.useEffect(() => {
-        const currentCheck = getBookedInfo(
-            bookingData.timeSlot,
-            bookingData.doctor,
-            bookingData.date,
-        );
-        if (currentCheck.isBooked) {
+        const isCurrentInvalid =
+            !bookingData.timeSlot ||
+            isSlotPast(bookingData.timeSlot, bookingData.date) ||
+            getBookedInfo(
+                bookingData.timeSlot,
+                bookingData.doctor,
+                bookingData.date,
+            ).isBooked;
+
+        if (isCurrentInvalid) {
             const firstAvailable = ALL_TIME_SLOTS.find(
                 (s) =>
+                    !isSlotPast(s.time, bookingData.date) &&
                     !getBookedInfo(s.time, bookingData.doctor, bookingData.date)
                         .isBooked,
             );
@@ -345,6 +392,18 @@ export default function Welcome({
         ) {
             alert(
                 "Please fill in your name, phone number, and preferred date.",
+            );
+            return;
+        }
+
+        if (!bookingData.timeSlot) {
+            alert("Please select an available upcoming time slot.");
+            return;
+        }
+
+        if (isSlotPast(bookingData.timeSlot, bookingData.date)) {
+            alert(
+                `The time slot ${bookingData.timeSlot} has already passed for today. Please select an upcoming slot.`,
             );
             return;
         }
@@ -966,6 +1025,14 @@ export default function Welcome({
                                                                                 bookingData.doctor,
                                                                                 bookingData.date,
                                                                             );
+                                                                        const isPast =
+                                                                            isSlotPast(
+                                                                                s.time,
+                                                                                bookingData.date,
+                                                                            );
+                                                                        const isUnavailable =
+                                                                            booked.isBooked ||
+                                                                            isPast;
                                                                         return (
                                                                             <SelectItem
                                                                                 key={
@@ -975,10 +1042,10 @@ export default function Welcome({
                                                                                     s.time
                                                                                 }
                                                                                 disabled={
-                                                                                    booked.isBooked
+                                                                                    isUnavailable
                                                                                 }
                                                                                 className={cn(
-                                                                                    booked.isBooked &&
+                                                                                    isUnavailable &&
                                                                                         "opacity-50 text-muted-foreground cursor-not-allowed line-through",
                                                                                 )}
                                                                             >
@@ -989,11 +1056,12 @@ export default function Welcome({
                                                                                 {
                                                                                     s.period
                                                                                 }
-
                                                                                 )
-                                                                                {booked.isBooked
-                                                                                    ? " — Confirmed (Unavailable)"
-                                                                                    : " — Available"}
+                                                                                {isPast
+                                                                                    ? " — Passed (Unavailable)"
+                                                                                    : booked.isBooked
+                                                                                      ? " — Confirmed (Unavailable)"
+                                                                                      : " — Available"}
                                                                             </SelectItem>
                                                                         );
                                                                     },
@@ -1023,12 +1091,15 @@ export default function Welcome({
                                                             {
                                                                 ALL_TIME_SLOTS.filter(
                                                                     (s) =>
+                                                                        !isSlotPast(
+                                                                            s.time,
+                                                                            bookingData.date,
+                                                                        ) &&
                                                                         !getBookedInfo(
                                                                             s.time,
                                                                             bookingData.doctor,
                                                                             bookingData.date,
-                                                                        )
-                                                                            .isBooked,
+                                                                        ).isBooked,
                                                                 ).length
                                                             }
                                                         </span>{" "}
@@ -1047,11 +1118,37 @@ export default function Welcome({
                                                                     bookingData.doctor,
                                                                     bookingData.date,
                                                                 );
+                                                            const isPast =
+                                                                isSlotPast(
+                                                                    slot.time,
+                                                                    bookingData.date,
+                                                                );
                                                             const isBooked =
                                                                 booked.isBooked;
                                                             const isSelected =
                                                                 bookingData.timeSlot ===
                                                                 slot.time;
+
+                                                            if (isPast) {
+                                                                return (
+                                                                    <div
+                                                                        key={
+                                                                            slot.time
+                                                                        }
+                                                                        className="relative flex flex-col items-center justify-center p-2 rounded-lg border border-dashed border-border/60 bg-muted/20 text-muted-foreground/40 cursor-not-allowed select-none"
+                                                                        title={`${slot.time} has already passed for today`}
+                                                                    >
+                                                                        <span className="text-xs font-medium line-through decoration-muted-foreground/40">
+                                                                            {
+                                                                                slot.time
+                                                                            }
+                                                                        </span>
+                                                                        <span className="text-[9px] font-semibold tracking-tight text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+                                                                            Passed
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            }
 
                                                             if (isBooked) {
                                                                 return (
@@ -1126,7 +1223,7 @@ export default function Welcome({
                                                     )}
                                                 </div>
 
-                                                <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40">
+                                                <div className="flex flex-wrap items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 gap-2">
                                                     <span className="flex items-center gap-1.5">
                                                         <span className="size-1.5 rounded-full bg-emerald-500" />
                                                         Available for booking
@@ -1134,7 +1231,10 @@ export default function Welcome({
                                                     <span className="flex items-center gap-1.5">
                                                         <span className="size-1.5 rounded-full bg-rose-500" />
                                                         Confirmed with Doctor
-                                                        (Blocked)
+                                                    </span>
+                                                    <span className="flex items-center gap-1.5">
+                                                        <span className="size-1.5 rounded-full bg-muted-foreground/50" />
+                                                        Time Passed
                                                     </span>
                                                 </div>
                                             </div>

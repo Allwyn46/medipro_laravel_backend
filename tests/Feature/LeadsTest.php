@@ -87,3 +87,50 @@ test('database has Michael Chen lead with activities', function () {
 
     expect($lead->activities->first()->title)->toBe('Consultation Booking Call');
 });
+
+test('authenticated users can update lead status to Won with total amount and payment status', function () {
+    $user = User::factory()->create();
+    $lead = Lead::find(1);
+
+    $response = $this->actingAs($user)->patchJson(route('leads.update-status', ['id' => $lead->id]), [
+        'status' => 'Won',
+        'value' => 7500,
+        'payment_status' => 'Paid',
+        'notes' => 'Treatment approved, full payment made via card.',
+    ]);
+
+    $response->assertOk()
+        ->assertJson([
+            'success' => true,
+        ]);
+
+    $freshLead = $lead->fresh(['activities']);
+    expect($freshLead->status)->toBe('Won')
+        ->and((float) $freshLead->value)->toBe(7500.0)
+        ->and($freshLead->payment_status)->toBe('Paid');
+
+    $latestActivity = $freshLead->activities->last();
+    expect($latestActivity->type)->toBe('Consultation')
+        ->and($latestActivity->title)->toBe('Consultation Completed - Won')
+        ->and($latestActivity->description)->toContain('7,500.00')
+        ->and($latestActivity->description)->toContain('Paid');
+});
+
+test('authenticated users can add clinical notes to lead', function () {
+    $user = User::factory()->create();
+    $lead = Lead::find(1);
+
+    $response = $this->actingAs($user)->postJson(route('leads.add-note', ['id' => $lead->id]), [
+        'note' => 'Patient called to confirm follow-up schedule.',
+    ]);
+
+    $response->assertOk()
+        ->assertJson([
+            'success' => true,
+        ]);
+
+    $freshLead = $lead->fresh(['activities']);
+    $latestActivity = $freshLead->activities->last();
+    expect($latestActivity->type)->toBe('Note')
+        ->and($latestActivity->description)->toBe('Patient called to confirm follow-up schedule.');
+});

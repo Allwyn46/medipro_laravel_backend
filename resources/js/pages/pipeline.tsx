@@ -239,7 +239,7 @@ const pipelineColumns = columnHelper.columns([
                         column.toggleSorting(column.getIsSorted() === "asc")
                     }
                 >
-                    Value
+                    Total Value
                     <ArrowUpDownIcon className="ml-1 size-3 text-muted-foreground" />
                 </Button>
             </div>

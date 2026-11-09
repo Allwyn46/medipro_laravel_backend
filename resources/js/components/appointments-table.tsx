@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Appointment, AppointmentStatus, AppointmentType } from "@/types/appointment";
+import { BookAppointmentDialog } from "@/components/book-appointment-dialog";
 
 const features = tableFeatures({
     columnFilteringFeature,
@@ -544,14 +545,17 @@ export function AppointmentsTable({
                                 >
                                     View Pipeline
                                 </Button>
-                                <Button
-                                    size="sm"
-                                    className="bg-primary text-primary-foreground"
-                                    render={<Link href="/" target="_blank" />}
-                                >
-                                    <PlusIcon className="size-4 mr-1" />
-                                    Book as Patient
-                                </Button>
+                                <BookAppointmentDialog
+                                    trigger={
+                                        <Button
+                                            size="sm"
+                                            className="bg-primary text-primary-foreground cursor-pointer shadow-xs"
+                                        >
+                                            <PlusIcon className="size-4 mr-1" />
+                                            Book as Patient
+                                        </Button>
+                                    }
+                                />
                             </div>
                         </div>
 

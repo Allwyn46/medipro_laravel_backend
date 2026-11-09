@@ -32,6 +32,8 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
     StethoscopeIcon,
+    CreditCardIcon,
+    TrophyIcon,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -43,12 +45,30 @@ import {
     CardDescription,
 } from "@/components/ui/card";
 import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
     Table,
@@ -58,8 +78,15 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 import Layout from "../layout/Layout";
-import type { Lead, LeadActivity, LeadPriority, LeadStatus } from "@/types/lead";
+import type {
+    Lead,
+    LeadActivity,
+    LeadPriority,
+    LeadStatus,
+    PaymentStatus,
+} from "@/types/lead";
 
 function getStatusBadgeClass(status: LeadStatus) {
     switch (status) {
@@ -88,6 +115,18 @@ function getPriorityBadgeVariant(priority: LeadPriority) {
             return "secondary" as const;
         case "Low":
             return "outline" as const;
+    }
+}
+
+function getPaymentBadgeClass(status?: string) {
+    switch (status) {
+        case "Paid":
+            return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800";
+        case "Partially Paid":
+            return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
+        case "Pending":
+        default:
+            return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
     }
 }
 
@@ -183,6 +222,13 @@ export default function SingleLeadPage({
     const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(
         lead.status
     );
+    const [currentValue, setCurrentValue] = React.useState<number>(
+        Number(lead.value) || 0
+    );
+    const [currentPaymentStatus, setCurrentPaymentStatus] =
+        React.useState<PaymentStatus>(
+            lead.payment_status || lead.paymentStatus || "Pending"
+        );
     const [activities, setActivities] = React.useState<LeadActivity[]>(
         () => lead.activities || []
     );
@@ -190,6 +236,19 @@ export default function SingleLeadPage({
         { id: "date", desc: true },
     ]);
     const [newNote, setNewNote] = React.useState("");
+    const [isSavingNote, setIsSavingNote] = React.useState(false);
+
+    // Won popup dialog state
+    const [isWonDialogOpen, setIsWonDialogOpen] = React.useState(false);
+    const [wonAmount, setWonAmount] = React.useState(
+        String(lead.value || 1500)
+    );
+    const [wonPaymentStatus, setWonPaymentStatus] =
+        React.useState<PaymentStatus>(
+            lead.payment_status || lead.paymentStatus || "Paid"
+        );
+    const [wonNotes, setWonNotes] = React.useState("");
+    const [isSavingWon, setIsSavingWon] = React.useState(false);
 
     // Find next / previous leads for navigation
     const currentIndex = allLeads.findIndex((l) => l.id === lead.id);
@@ -210,34 +269,142 @@ export default function SingleLeadPage({
         onSortingChange: setSorting,
     });
 
-    const handleAddNote = (e: React.FormEvent) => {
+    const handleAddNote = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newNote.trim()) return;
 
-        const activity: LeadActivity = {
-            id: Date.now(),
-            type: "Note",
-            title: "Staff Clinical Note",
-            description: newNote.trim(),
-            doctor: "Current Specialist",
-            date: new Date().toISOString().replace("T", " ").substring(0, 16),
-        };
+        const noteText = newNote.trim();
+        setIsSavingNote(true);
 
-        setActivities([activity, ...activities]);
-        setNewNote("");
+        try {
+            const res = await fetch(`/api/leads/${lead.id}/notes`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    note: noteText,
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || "Failed to save note");
+            }
+
+            const data = await res.json();
+            if (data.activity) {
+                setActivities((prev) => [data.activity, ...prev]);
+            }
+            setNewNote("");
+            toast.success("Clinical Note Added", {
+                description: "Saved to lead activity history.",
+            });
+        } catch (error: any) {
+            console.error("Error saving note:", error);
+            toast.error("Failed to save note", {
+                description: error.message || "Please try again.",
+            });
+        } finally {
+            setIsSavingNote(false);
+        }
     };
 
-    const handleStatusChange = (status: LeadStatus) => {
+    const handleStatusSelect = (status: LeadStatus) => {
+        if (status === "Won") {
+            setWonAmount(String(currentValue || 1500));
+            setWonPaymentStatus("Paid");
+            setWonNotes("");
+            setIsWonDialogOpen(true);
+            return;
+        }
+
+        saveStatusUpdate(status);
+    };
+
+    const saveStatusUpdate = async (status: LeadStatus) => {
         setCurrentStatus(status);
-        const changeActivity: LeadActivity = {
-            id: Date.now(),
-            type: "Status Change",
-            title: `Status Changed to ${status}`,
-            description: `Lead status updated in clinic pipeline.`,
-            doctor: "Staff System",
-            date: new Date().toISOString().replace("T", " ").substring(0, 16),
-        };
-        setActivities([changeActivity, ...activities]);
+        try {
+            const res = await fetch(`/api/leads/${lead.id}/status`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    status,
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || "Failed to update lead status");
+            }
+
+            const data = await res.json();
+            if (data.activity) {
+                setActivities((prev) => [data.activity, ...prev]);
+            }
+            toast.success("Status Updated", {
+                description: `Lead status changed to ${status}.`,
+            });
+        } catch (error: any) {
+            console.error("Error updating status:", error);
+            toast.error("Failed to update status", {
+                description: error.message || "Please try again.",
+            });
+        }
+    };
+
+    const handleWonSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const numericAmount = parseFloat(wonAmount);
+        if (isNaN(numericAmount) || numericAmount < 0) {
+            toast.error("Please enter a valid amount");
+            return;
+        }
+
+        setIsSavingWon(true);
+        try {
+            const res = await fetch(`/api/leads/${lead.id}/status`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    status: "Won",
+                    value: numericAmount,
+                    payment_status: wonPaymentStatus,
+                    notes: wonNotes.trim() || undefined,
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || "Failed to mark as Won");
+            }
+
+            const data = await res.json();
+            setCurrentStatus("Won");
+            setCurrentValue(numericAmount);
+            setCurrentPaymentStatus(wonPaymentStatus);
+            if (data.activity) {
+                setActivities((prev) => [data.activity, ...prev]);
+            }
+            setIsWonDialogOpen(false);
+            toast.success("Consultation Completed — Marked as Won!", {
+                description: `Total Value updated to ₹${numericAmount.toLocaleString()} (${wonPaymentStatus}). Saved to database.`,
+            });
+        } catch (error: any) {
+            console.error("Error saving won consultation:", error);
+            toast.error("Failed to mark as Won", {
+                description: error.message || "Please check your network and try again.",
+            });
+        } finally {
+            setIsSavingWon(false);
+        }
     };
 
     return (
@@ -372,7 +539,7 @@ export default function SingleLeadPage({
                                 ).map((st) => (
                                     <DropdownMenuItem
                                         key={st}
-                                        onClick={() => handleStatusChange(st)}
+                                        onClick={() => handleStatusSelect(st)}
                                         className="text-xs"
                                     >
                                         <Badge
@@ -410,7 +577,7 @@ export default function SingleLeadPage({
                                     Clinical Overview
                                 </CardTitle>
                                 <CardDescription>
-                                    Procedure details and expected treatment value.
+                                    Procedure details and total treatment value.
                                 </CardDescription>
                             </CardHeader>
                             <div className="flex flex-col gap-3 px-4 pb-4 text-xs">
@@ -426,11 +593,23 @@ export default function SingleLeadPage({
                                 <div className="flex items-center justify-between py-1 border-b">
                                     <span className="flex items-center gap-1.5 text-muted-foreground">
                                         <IndianRupeeIcon className="size-4" />
-                                        Estimated Value
+                                        Total Value
                                     </span>
                                     <span className="font-bold text-foreground text-sm tabular-nums">
-                                        ₹{lead.value.toLocaleString()}
+                                        ₹{currentValue.toLocaleString()}
                                     </span>
+                                </div>
+                                <div className="flex items-center justify-between py-1 border-b">
+                                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                                        <CreditCardIcon className="size-4" />
+                                        Payment Status
+                                    </span>
+                                    <Badge
+                                        variant="outline"
+                                        className={`font-medium ${getPaymentBadgeClass(currentPaymentStatus)}`}
+                                    >
+                                        {currentPaymentStatus}
+                                    </Badge>
                                 </div>
                                 <div className="flex items-center justify-between py-1 border-b">
                                     <span className="flex items-center gap-1.5 text-muted-foreground">
@@ -489,10 +668,10 @@ export default function SingleLeadPage({
                                         size="sm"
                                         variant="outline"
                                         className="self-end text-xs"
-                                        disabled={!newNote.trim()}
+                                        disabled={!newNote.trim() || isSavingNote}
                                     >
                                         <PlusIcon className="size-3 mr-1" />
-                                        Save Note
+                                        {isSavingNote ? "Saving..." : "Save Note"}
                                     </Button>
                                 </form>
                             </div>
@@ -583,6 +762,140 @@ export default function SingleLeadPage({
                     </div>
                 </div>
             </div>
+
+            {/* Consultation Completed / Won Status Dialog */}
+            <Dialog open={isWonDialogOpen} onOpenChange={setIsWonDialogOpen}>
+                <DialogContent className="sm:max-w-md p-5 sm:p-6">
+                    <DialogHeader>
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                <TrophyIcon className="size-5" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-base sm:text-lg font-semibold tracking-tight">
+                                    Consultation Completed — Mark as Won
+                                </DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                                    Record the final treatment amount and patient payment status for this consultation.
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <form onSubmit={handleWonSubmit} className="flex flex-col gap-4 mt-2">
+                        {/* Procedure Amount */}
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="wonAmount" className="text-xs font-medium">
+                                Total Amount (₹) <span className="text-destructive">*</span>
+                            </Label>
+                            <div className="relative">
+                                <IndianRupeeIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                                <Input
+                                    id="wonAmount"
+                                    type="number"
+                                    min="0"
+                                    step="50"
+                                    required
+                                    placeholder="Enter total treatment value"
+                                    value={wonAmount}
+                                    onChange={(e) => setWonAmount(e.target.value)}
+                                    className="pl-8 text-xs h-8"
+                                    autoFocus
+                                />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                                Final procedure or consultation fee billed to patient.
+                            </p>
+                        </div>
+
+                        {/* Payment Status */}
+                        <div className="flex flex-col gap-1.5">
+                            <Label className="text-xs font-medium">
+                                Payment Status <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                                value={wonPaymentStatus}
+                                onValueChange={(val) =>
+                                    setWonPaymentStatus((val as PaymentStatus) || "Paid")
+                                }
+                            >
+                                <SelectTrigger className="w-full text-xs h-8">
+                                    <SelectValue placeholder="Select payment status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="Paid" className="text-xs">
+                                            <span className="flex items-center gap-2">
+                                                <span className="size-2 rounded-full bg-emerald-500" />
+                                                Paid (Full payment received)
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="Partially Paid" className="text-xs">
+                                            <span className="flex items-center gap-2">
+                                                <span className="size-2 rounded-full bg-amber-500" />
+                                                Partially Paid (Deposit / advance received)
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="Pending" className="text-xs">
+                                            <span className="flex items-center gap-2">
+                                                <span className="size-2 rounded-full bg-blue-500" />
+                                                Pending (Awaiting invoice payment)
+                                            </span>
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Optional Remarks */}
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="wonNotes" className="text-xs font-medium">
+                                Clinical / Payment Remarks{" "}
+                                <span className="text-muted-foreground text-[11px]">(Optional)</span>
+                            </Label>
+                            <Input
+                                id="wonNotes"
+                                type="text"
+                                placeholder="e.g. Paid via UPI, digital scan completed, clear aligner kit ordered."
+                                value={wonNotes}
+                                onChange={(e) => setWonNotes(e.target.value)}
+                                className="text-xs h-8"
+                            />
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t mt-1">
+                            <DialogClose
+                                render={
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs h-8"
+                                        disabled={isSavingWon}
+                                    >
+                                        Cancel
+                                    </Button>
+                                }
+                            />
+                            <Button
+                                type="submit"
+                                size="sm"
+                                disabled={isSavingWon}
+                                className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                            >
+                                {isSavingWon ? (
+                                    "Saving..."
+                                ) : (
+                                    <>
+                                        <CheckCircle2Icon className="size-3.5 mr-1.5" />
+                                        Save & Mark as Won
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </Layout>
     );
 }

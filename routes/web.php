@@ -39,7 +39,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/leads/{id}', [LeadController::class, 'show'])->name('leads.show');
 
     // APPOINTMENT MANAGEMENT APIS
+    Route::get('/api/patients', [AppointmentController::class, 'patients'])->name('patients.index');
     Route::post('/api/appointments/{id}/confirm', [AppointmentController::class, 'confirm'])->name('appointments.confirm');
     Route::post('/api/appointments/{id}/decline', [AppointmentController::class, 'decline'])->name('appointments.decline');
     Route::post('/api/appointments/reset-demo', [AppointmentController::class, 'resetDemo'])->name('appointments.reset-demo');
+
+    // LEAD MANAGEMENT APIS
+    Route::patch('/api/leads/{id}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
+    Route::post('/api/leads/{id}/notes', [LeadController::class, 'addNote'])->name('leads.add-note');
 });

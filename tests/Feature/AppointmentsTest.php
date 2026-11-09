@@ -52,6 +52,98 @@ test('client can book an appointment and save to database', function () {
     ]);
 });
 
+test('booking an appointment with custom total value saves value and pending payment status to lead', function () {
+    $payload = [
+        'patientName' => 'Alice Wonder',
+        'patientEmail' => 'alice@example.com',
+        'patientPhone' => '+1 (555) 777-8888',
+        'service' => 'Orthodontics & Clear Aligners',
+        'doctor' => 'Dr. Jamik Tashpulatov',
+        'date' => '2026-11-20',
+        'time' => '11:00 AM',
+        'value' => 3800,
+    ];
+
+    $response = $this->postJson(route('appointments.store'), $payload);
+
+    $response->assertCreated();
+
+    $this->assertDatabaseHas('leads', [
+        'email' => 'alice@example.com',
+        'name' => 'Alice Wonder',
+        'value' => 3800,
+        'payment_status' => 'Pending',
+    ]);
+});
+
+test('authenticated staff can search and fetch existing patients list', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->getJson(route('patients.index'));
+
+    $response->assertOk()
+        ->assertJsonStructure([
+            'patients' => [
+                '*' => ['id', 'name', 'email', 'phone', 'service', 'doctor'],
+            ],
+        ]);
+
+    // Search by name
+    $searchResponse = $this->actingAs($user)->getJson(route('patients.index', ['q' => 'Sarah']));
+    $searchResponse->assertOk();
+    $patients = $searchResponse->json('patients');
+    expect(count($patients))->toBeGreaterThan(0)
+        ->and($patients[0]['name'])->toContain('Sarah');
+});
+
+test('booking an appointment for an existing patient links lead_id and creates activity', function () {
+    $existingLead = Lead::first();
+    expect($existingLead)->not->toBeNull();
+
+    $payload = [
+        'patientName' => $existingLead->name,
+        'patientEmail' => $existingLead->email,
+        'patientPhone' => $existingLead->phone,
+        'service' => 'Cardiology Checkup & ECG',
+        'doctor' => 'Dr. Emily Whalen',
+        'date' => '2026-11-25',
+        'time' => '02:30 PM',
+        'leadId' => $existingLead->id,
+        'value' => 2500,
+    ];
+
+    $response = $this->postJson(route('appointments.store'), $payload);
+
+    $response->assertCreated();
+
+    $appointment = Appointment::where('date', '2026-11-25')->where('time', '02:30 PM')->first();
+    expect($appointment)->not->toBeNull()
+        ->and($appointment->lead_id)->toBe($existingLead->id);
+
+    $this->assertDatabaseHas('lead_activities', [
+        'lead_id' => $existingLead->id,
+        'type' => 'Consultation',
+        'title' => 'Appointment Booked',
+    ]);
+});
+
+test('cannot double book an already booked slot for same doctor and date', function () {
+    $payload = [
+        'patientName' => 'Second Patient',
+        'patientEmail' => 'second@example.com',
+        'patientPhone' => '+1 (555) 111-2222',
+        'service' => 'Dental Implants',
+        'doctor' => 'Dr. Eddie Lake',
+        'date' => 'Today',
+        'time' => '09:30 AM',
+    ];
+
+    $response = $this->postJson(route('appointments.store'), $payload);
+
+    $response->assertStatus(422)
+        ->assertJsonStructure(['message']);
+});
+
 test('authenticated staff can confirm pending appointment in database', function () {
     $user = User::factory()->create();
     $pending = Appointment::where('status', 'Pending')->first();

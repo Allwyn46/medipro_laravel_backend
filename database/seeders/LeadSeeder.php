@@ -352,6 +352,7 @@ class LeadSeeder extends Seeder
             $lead = Lead::updateOrCreate(
                 ['id' => $data['id']],
                 array_merge($data, [
+                    'payment_status' => $data['payment_status'] ?? ($data['status'] === 'Won' ? 'Paid' : 'Pending'),
                     'last_contact_date' => $lastContact->format('Y-m-d'),
                     'created_at' => $createdAt,
                     'updated_at' => $lastContact,

@@ -230,7 +230,7 @@ const columns = columnHelper.columns([
                         column.toggleSorting(column.getIsSorted() === "asc")
                     }
                 >
-                    Est. Value
+                    Total Value
                     <ArrowUpDownIcon className="ml-1 size-3 text-muted-foreground" />
                 </Button>
             </div>
@@ -390,7 +390,7 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                 value: `₹${totalPipelineValue.toLocaleString()}`,
                 badgeText: "+10.8%",
                 badgeTrend: "up",
-                footerTrendText: "Estimated procedure revenue",
+                footerTrendText: "Total procedure revenue",
                 footerSubtext: "Across all clinical specialties",
             },
             {

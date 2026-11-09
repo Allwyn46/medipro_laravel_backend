@@ -46,6 +46,7 @@ class LeadFactory extends Factory
             ]),
             'priority' => fake()->randomElement(['High', 'Medium', 'Low']),
             'value' => fake()->randomElement([450, 1200, 1850, 2900, 3200, 4500, 6400]),
+            'payment_status' => fake()->randomElement(['Pending', 'Partially Paid', 'Paid']),
             'doctor' => fake()->randomElement([
                 'Dr. Eddie Lake',
                 'Dr. Jamik Tashpulatov',

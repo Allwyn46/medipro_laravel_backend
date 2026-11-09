@@ -8,6 +8,8 @@ export type LeadStatus =
 
 export type LeadPriority = 'High' | 'Medium' | 'Low';
 
+export type PaymentStatus = 'Paid' | 'Partially Paid' | 'Pending';
+
 export interface LeadActivity {
     id: number;
     type: 'Call' | 'Email' | 'Consultation' | 'Note' | 'Status Change';
@@ -26,6 +28,8 @@ export interface Lead {
     status: LeadStatus;
     priority: LeadPriority;
     value: number;
+    payment_status?: PaymentStatus;
+    paymentStatus?: PaymentStatus;
     doctor: string;
     source: string;
     createdAt: string;

@@ -28,6 +28,7 @@ class Lead extends Model
     protected $appends = [
         'createdAt',
         'lastContactDate',
+        'paymentStatus',
     ];
 
     /**
@@ -73,5 +74,13 @@ class Lead extends Model
         return isset($this->attributes['last_contact_date'])
             ? Carbon::parse($this->attributes['last_contact_date'])->format('Y-m-d')
             : null;
+    }
+
+    /**
+     * Accessor for camelCase paymentStatus expected by frontend components.
+     */
+    public function getPaymentStatusAttribute(): string
+    {
+        return $this->attributes['payment_status'] ?? 'Pending';
     }
 }

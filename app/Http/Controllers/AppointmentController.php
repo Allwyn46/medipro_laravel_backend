@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Lead;
+use App\Models\LeadActivity;
 use Database\Seeders\AppointmentSeeder;
 use Database\Seeders\LeadSeeder;
 use Illuminate\Http\JsonResponse;
@@ -38,6 +39,30 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Get a list of existing patients/leads for appointment booking search.
+     */
+    public function patients(Request $request): JsonResponse
+    {
+        $query = Lead::query();
+
+        if ($search = $request->query('q')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $patients = $query->orderBy('name')
+            ->select(['id', 'name', 'email', 'phone', 'service', 'doctor', 'status', 'value', 'notes'])
+            ->get();
+
+        return response()->json([
+            'patients' => $patients,
+        ]);
+    }
+
+    /**
      * Book a new appointment from client portal or dashboard.
      */
     public function store(Request $request): JsonResponse
@@ -55,24 +80,53 @@ class AppointmentController extends Controller
             'duration' => ['nullable', 'string', 'max:50'],
             'notes' => ['nullable', 'string'],
             'source' => ['nullable', 'string', 'max:100'],
+            'value' => ['nullable', 'numeric', 'min:0'],
+            'leadId' => ['nullable', 'integer', 'exists:leads,id'],
         ]);
 
+        $alreadyBooked = Appointment::where('doctor', $validated['doctor'])
+            ->where('date', $validated['date'])
+            ->where('time', $validated['time'])
+            ->whereIn('status', ['Confirmed', 'Scheduled', 'In Progress', 'Pending'])
+            ->exists();
+
+        if ($alreadyBooked) {
+            return response()->json([
+                'message' => "The time slot {$validated['time']} is already booked for {$validated['doctor']} on this date.",
+            ], 422);
+        }
+
+        $leadValue = isset($validated['value']) ? (float) $validated['value'] : 1500;
+
         // Find or create matching clinical lead
-        $lead = Lead::firstOrCreate(
-            ['email' => $validated['patientEmail']],
-            [
-                'name' => $validated['patientName'],
-                'phone' => $validated['patientPhone'],
-                'service' => $validated['service'],
-                'doctor' => $validated['doctor'],
-                'status' => 'New',
-                'priority' => 'High',
-                'value' => 1500,
-                'source' => $validated['source'] ?? 'Website Booking',
-                'last_contact_date' => now()->format('Y-m-d'),
-                'notes' => $validated['notes'] ?? 'Booked via client appointment portal.',
-            ]
-        );
+        $lead = null;
+        if (! empty($validated['leadId'])) {
+            $lead = Lead::find($validated['leadId']);
+            if ($lead) {
+                $lead->update([
+                    'last_contact_date' => now()->format('Y-m-d'),
+                ]);
+            }
+        }
+
+        if (! $lead) {
+            $lead = Lead::firstOrCreate(
+                ['email' => $validated['patientEmail']],
+                [
+                    'name' => $validated['patientName'],
+                    'phone' => $validated['patientPhone'],
+                    'service' => $validated['service'],
+                    'doctor' => $validated['doctor'],
+                    'status' => 'New',
+                    'priority' => 'High',
+                    'value' => $leadValue,
+                    'payment_status' => 'Pending',
+                    'source' => $validated['source'] ?? 'Website Booking',
+                    'last_contact_date' => now()->format('Y-m-d'),
+                    'notes' => $validated['notes'] ?? 'Booked via client appointment portal.',
+                ]
+            );
+        }
 
         $appointment = Appointment::create([
             'patient_name' => $validated['patientName'],
@@ -90,6 +144,15 @@ class AppointmentController extends Controller
             'notes' => $validated['notes'] ?? null,
             'source' => $validated['source'] ?? 'Website Booking',
             'requested_at' => 'Just now',
+        ]);
+
+        LeadActivity::create([
+            'lead_id' => $lead->id,
+            'type' => 'Consultation',
+            'title' => 'Appointment Booked',
+            'description' => "Scheduled consultation for {$validated['date']} at {$validated['time']} with {$validated['doctor']}.",
+            'doctor' => $validated['doctor'],
+            'date' => now()->format('Y-m-d H:i'),
         ]);
 
         return response()->json([
