@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Appointment;
+use App\Models\Lead;
 use Illuminate\Database\Seeder;
 
 class AppointmentSeeder extends Seeder
@@ -237,6 +238,10 @@ class AppointmentSeeder extends Seeder
         ];
 
         foreach ($appointments as $item) {
+            if (isset($item['lead_id']) && ! Lead::where('id', $item['lead_id'])->exists()) {
+                $item['lead_id'] = null;
+            }
+
             Appointment::updateOrCreate(
                 ['id' => $item['id']],
                 $item

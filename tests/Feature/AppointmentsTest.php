@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Appointment;
+use App\Models\Lead;
+use App\Models\LeadActivity;
 use App\Models\User;
 use Database\Seeders\AppointmentSeeder;
 use Database\Seeders\LeadSeeder;
@@ -76,4 +78,18 @@ test('authenticated staff can decline appointment in database', function () {
         ]);
 
     expect($pending->fresh()->status)->toBe('Cancelled');
+});
+
+test('home welcome page loads cleanly when database is completely empty', function () {
+    Appointment::query()->delete();
+    LeadActivity::query()->delete();
+    Lead::query()->delete();
+
+    $response = $this->get(route('home'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('welcome')
+        ->has('bookedSlots', 0)
+    );
 });

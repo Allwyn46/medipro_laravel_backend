@@ -45,6 +45,20 @@ test('authenticated users receive 404 for non-existent lead', function () {
     $this->actingAs($user)->get(route('leads.show', ['id' => 9999]))->assertNotFound();
 });
 
+test('authenticated users can view leads index and pipeline when database is completely empty', function () {
+    Lead::query()->delete();
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('leads.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('leads/index')->has('leads', 0));
+
+    $this->actingAs($user)->get(route('pipeline'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('pipeline')->has('leads', 0));
+});
+
 test('authenticated users can view pipeline page', function () {
     $user = User::factory()->create();
 

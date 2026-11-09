@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Lead;
 use Database\Seeders\AppointmentSeeder;
+use Database\Seeders\LeadSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -145,6 +146,10 @@ class AppointmentController extends Controller
      */
     public function resetDemo(): JsonResponse
     {
+        if (Lead::count() === 0) {
+            (new LeadSeeder)->run();
+        }
+
         (new AppointmentSeeder)->run();
 
         return response()->json([

@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Lead;
-use Database\Seeders\AppointmentSeeder;
-use Database\Seeders\LeadSeeder;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,14 +14,6 @@ class DashboardController extends Controller
      */
     public function index(): Response
     {
-        if (Lead::count() === 0) {
-            (new LeadSeeder)->run();
-        }
-
-        if (Appointment::count() === 0) {
-            (new AppointmentSeeder)->run();
-        }
-
         $allLeadsValue = (float) Lead::sum('value');
         $newAppointmentsCount = Appointment::where('status', '!=', 'Cancelled')->count();
         $todayAppointmentsCount = Appointment::where('date', 'Today')->where('status', '!=', 'Cancelled')->count();

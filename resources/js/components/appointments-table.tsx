@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import {
     columnFilteringFeature,
     columnVisibilityFeature,
@@ -334,68 +334,29 @@ export function AppointmentsTable({
     appointments?: Appointment[];
     pendingAppointments?: Appointment[];
 }) {
-    const [data, setData] = React.useState<Appointment[]>(() => {
-        if (typeof window !== "undefined") {
-            const stored = localStorage.getItem("medi_confirmed_appointments");
-            if (stored) {
-                try {
-                    return JSON.parse(stored);
-                } catch (e) {
-                    console.error("Failed to parse stored confirmed appointments", e);
-                }
-            }
-        }
-        return appointments;
-    });
-
-    const [pendingAppointments, setPendingAppointments] = React.useState<Appointment[]>(() => {
-        if (typeof window !== "undefined") {
-            const stored = localStorage.getItem("medi_pending_appointments");
-            if (stored) {
-                try {
-                    return JSON.parse(stored);
-                } catch (e) {
-                    console.error("Failed to parse stored pending appointments", e);
-                }
-            }
-        }
-        return initialPending;
-    });
+    const [data, setData] = React.useState<Appointment[]>(appointments);
+    const [pendingAppointments, setPendingAppointments] =
+        React.useState<Appointment[]>(initialPending);
 
     // Sync with prop updates from server
     React.useEffect(() => {
-        if (appointments.length > 0 && !localStorage.getItem("medi_confirmed_appointments")) {
-            setData(appointments);
+        setData(appointments);
+        if (appointments.length === 0 && typeof window !== "undefined") {
+            localStorage.removeItem("medi_confirmed_appointments");
         }
     }, [appointments]);
 
     React.useEffect(() => {
-        if (initialPending.length > 0 && !localStorage.getItem("medi_pending_appointments")) {
-            setPendingAppointments(initialPending);
+        setPendingAppointments(initialPending);
+        if (initialPending.length === 0 && typeof window !== "undefined") {
+            localStorage.removeItem("medi_pending_appointments");
         }
     }, [initialPending]);
 
     // Listen to changes from client booking page (/welcome) or other browser tabs
     React.useEffect(() => {
         const handleUpdate = () => {
-            if (typeof window !== "undefined") {
-                const storedPending = localStorage.getItem("medi_pending_appointments");
-                if (storedPending) {
-                    try {
-                        setPendingAppointments(JSON.parse(storedPending));
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }
-                const storedConfirmed = localStorage.getItem("medi_confirmed_appointments");
-                if (storedConfirmed) {
-                    try {
-                        setData(JSON.parse(storedConfirmed));
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }
-            }
+            router.reload({ only: ["appointments", "pendingAppointments", "metrics"] });
         };
 
         window.addEventListener("medi_appointments_updated", handleUpdate);
@@ -433,13 +394,11 @@ export function AppointmentsTable({
         setData(updatedData);
 
         if (typeof window !== "undefined") {
-            localStorage.setItem("medi_pending_appointments", JSON.stringify(updatedPending));
-            localStorage.setItem("medi_confirmed_appointments", JSON.stringify(updatedData));
             window.dispatchEvent(new Event("medi_appointments_updated"));
         }
 
         toast.success("Appointment Confirmed!", {
-            description: `${apt.patientName} scheduled with ${apt.doctor} for ${apt.dateTimeFormatted || `${apt.date} at ${apt.time}`}. Saved to database.`,
+            description: `${apt.patientName || "Patient"} scheduled with ${apt.doctor} for ${apt.dateTimeFormatted || `${apt.date} at ${apt.time}`}. Saved to database.`,
         });
     };
 
@@ -459,12 +418,11 @@ export function AppointmentsTable({
         setPendingAppointments(updatedPending);
 
         if (typeof window !== "undefined") {
-            localStorage.setItem("medi_pending_appointments", JSON.stringify(updatedPending));
             window.dispatchEvent(new Event("medi_appointments_updated"));
         }
 
         toast.info("Appointment Request Declined", {
-            description: `Declined booking request from ${apt.patientName}.`,
+            description: `Declined booking request from ${apt.patientName || "Patient"}.`,
         });
     };
 
@@ -830,15 +788,15 @@ export function AppointmentsTable({
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary uppercase">
-                                                    {apt.patientName.slice(0, 2)}
+                                                    {(apt.patientName || "PT").slice(0, 2)}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <h4 className="text-xs font-bold text-foreground truncate">
-                                                        {apt.patientName}
+                                                        {apt.patientName || "Patient"}
                                                     </h4>
                                                     <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                                                         <PhoneIcon className="size-3 shrink-0" />
-                                                        <span className="truncate">{apt.patientPhone}</span>
+                                                        <span className="truncate">{apt.patientPhone || "No phone provided"}</span>
                                                     </div>
                                                 </div>
                                             </div>

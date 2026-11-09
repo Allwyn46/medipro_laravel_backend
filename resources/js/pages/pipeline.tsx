@@ -278,7 +278,10 @@ export default function PipelinePage({
 }: {
     leads: Lead[];
 }) {
-    const [leads] = React.useState<Lead[]>(() => initialLeads || []);
+    const [leads, setLeads] = React.useState<Lead[]>(() => initialLeads || []);
+    React.useEffect(() => {
+        setLeads(initialLeads || []);
+    }, [initialLeads]);
     const [searchQuery, setSearchQuery] = React.useState("");
 
     // TanStack Table state

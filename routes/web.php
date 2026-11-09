@@ -6,14 +6,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PipelineController;
 use App\Models\Appointment;
-use Database\Seeders\AppointmentSeeder;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    if (Appointment::count() === 0) {
-        (new AppointmentSeeder)->run();
-    }
-
     $bookedSlots = Appointment::whereIn('status', ['Confirmed', 'Scheduled', 'In Progress'])
         ->select(['id', 'doctor', 'date', 'time', 'status'])
         ->get();

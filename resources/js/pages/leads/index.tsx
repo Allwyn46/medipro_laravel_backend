@@ -306,7 +306,10 @@ const columns = columnHelper.columns([
 ]);
 
 export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
-    const [data] = React.useState<Lead[]>(() => initialLeads || []);
+    const [data, setData] = React.useState<Lead[]>(() => initialLeads || []);
+    React.useEffect(() => {
+        setData(initialLeads || []);
+    }, [initialLeads]);
     const [rowSelection, setRowSelection] = React.useState({});
     const [columnVisibility, setColumnVisibility] =
         React.useState<ColumnVisibilityState>({});

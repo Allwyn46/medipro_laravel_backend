@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
-use Database\Seeders\LeadSeeder;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,10 +43,6 @@ class LeadController extends Controller
      */
     public static function getLeads(): array
     {
-        if (Lead::count() === 0) {
-            (new LeadSeeder)->run();
-        }
-
         return Lead::with('activities')->orderBy('id')->get()->toArray();
     }
 }
