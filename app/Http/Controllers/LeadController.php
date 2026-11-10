@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\LeadActivity;
+use App\Models\LeadFormField;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,6 +20,7 @@ class LeadController extends Controller
     {
         return Inertia::render('leads/index', [
             'leads' => self::getLeads(),
+            'customFields' => LeadFormField::active()->get(),
         ]);
     }
 
@@ -36,7 +39,90 @@ class LeadController extends Controller
         return Inertia::render('leads/show', [
             'lead' => $lead,
             'allLeads' => $allLeads,
+            'customFields' => LeadFormField::active()->get(),
         ]);
+    }
+
+    /**
+     * Display the lead custom fields settings page.
+     */
+    public function settings(): Response
+    {
+        return Inertia::render('settings/leads', [
+            'fields' => LeadFormField::orderBy('sort_order')->orderBy('id')->get(),
+        ]);
+    }
+
+    /**
+     * Store a newly created lead in the database.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $rules = [
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'service' => ['required', 'string', 'max:255'],
+            'doctor' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'string', 'in:New,Contacted,Consultation Scheduled,Treatment Plan Sent,Won,Lost'],
+            'priority' => ['required', 'string', 'in:High,Medium,Low'],
+            'value' => ['nullable', 'numeric', 'min:0'],
+            'source' => ['nullable', 'string', 'max:100'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'custom_fields' => ['nullable', 'array'],
+        ];
+
+        $activeFields = LeadFormField::active()->get();
+        foreach ($activeFields as $field) {
+            $fieldRules = [];
+            if ($field->is_required) {
+                $fieldRules[] = 'required';
+            } else {
+                $fieldRules[] = 'nullable';
+            }
+
+            if ($field->type === 'dropdown') {
+                $fieldRules[] = Rule::in($field->options ?? []);
+            } else {
+                $fieldRules[] = 'string';
+                $fieldRules[] = 'max:1000';
+            }
+
+            $rules["custom_fields.{$field->name}"] = $fieldRules;
+        }
+
+        $validated = $request->validate($rules);
+
+        $lead = Lead::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'] ?? '',
+            'phone' => $validated['phone'],
+            'service' => $validated['service'],
+            'doctor' => $validated['doctor'],
+            'status' => $validated['status'] ?? 'New',
+            'priority' => $validated['priority'] ?? 'Medium',
+            'value' => isset($validated['value']) ? (float) $validated['value'] : 1500.00,
+            'source' => $validated['source'] ?? 'Manual Entry',
+            'notes' => $validated['notes'] ?? null,
+            'custom_fields' => $validated['custom_fields'] ?? [],
+            'payment_status' => 'Pending',
+            'last_contact_date' => now()->format('Y-m-d'),
+        ]);
+
+        LeadActivity::create([
+            'lead_id' => $lead->id,
+            'type' => 'Note',
+            'title' => 'Lead Created Manually',
+            'description' => 'Patient lead recorded via clinic staff portal.'.(! empty($validated['notes']) ? " Notes: {$validated['notes']}" : ''),
+            'doctor' => $lead->doctor ?: (auth()->user()?->name ?? 'Clinical Staff'),
+            'date' => now()->format('Y-m-d H:i'),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lead created successfully.',
+            'lead' => $lead->fresh(['activities']),
+        ], 201);
     }
 
     /**

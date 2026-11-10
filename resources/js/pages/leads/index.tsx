@@ -70,8 +70,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { AddLeadDialog } from "@/components/add-lead-dialog";
 import Layout from "../layout/Layout";
-import type { Lead, LeadPriority, LeadStatus } from "@/types/lead";
+import type { Lead, LeadFormField, LeadPriority, LeadStatus } from "@/types/lead";
 
 const features = tableFeatures({
     columnFilteringFeature,
@@ -305,8 +306,15 @@ const columns = columnHelper.columns([
     }),
 ]);
 
-export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
+export default function LeadsPage({
+    leads: initialLeads,
+    customFields,
+}: {
+    leads: Lead[];
+    customFields?: LeadFormField[];
+}) {
     const [data, setData] = React.useState<Lead[]>(() => initialLeads || []);
+    const [isAddLeadOpen, setIsAddLeadOpen] = React.useState(false);
     React.useEffect(() => {
         setData(initialLeads || []);
     }, [initialLeads]);
@@ -434,12 +442,24 @@ export default function LeadsPage({ leads: initialLeads }: { leads: Lead[] }) {
                         >
                             View Pipeline Board
                         </Button>
-                        <Button className="bg-primary text-primary-foreground">
+                        <Button
+                            onClick={() => setIsAddLeadOpen(true)}
+                            className="bg-primary text-primary-foreground cursor-pointer"
+                        >
                             <PlusIcon className="size-4" />
                             <span>Add New Lead</span>
                         </Button>
                     </div>
                 </div>
+
+                <AddLeadDialog
+                    open={isAddLeadOpen}
+                    onOpenChange={setIsAddLeadOpen}
+                    customFields={customFields}
+                    onSuccess={(newLead) => {
+                        setData((prev) => [newLead, ...prev]);
+                    }}
+                />
 
                 {/* Metrics Cards */}
                 <SectionCards

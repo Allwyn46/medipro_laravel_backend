@@ -1,3 +1,4 @@
+import { Link, router } from "@inertiajs/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     DropdownMenu,
@@ -17,6 +18,7 @@ import {
 import {
     EllipsisVerticalIcon,
     CircleUserRoundIcon,
+    SettingsIcon,
     CreditCardIcon,
     BellIcon,
     LogOutIcon,
@@ -95,19 +97,19 @@ export function NavUser({
                                 <CircleUserRoundIcon />
                                 Account
                             </DropdownMenuItem>
-                            {/* <DropdownMenuItem>
-                <CreditCardIcon
-                />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BellIcon
-                />
-                Notifications
-              </DropdownMenuItem> */}
+                            <DropdownMenuItem
+                                onClick={() => router.visit("/settings/leads")}
+                                className="cursor-pointer"
+                            >
+                                <SettingsIcon />
+                                Settings
+                            </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => router.post("/logout")}
+                            className="cursor-pointer"
+                        >
                             <LogOutIcon />
                             Log out
                         </DropdownMenuItem>

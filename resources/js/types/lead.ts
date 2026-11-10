@@ -19,6 +19,19 @@ export interface LeadActivity {
     date: string;
 }
 
+export interface LeadFormField {
+    id: number;
+    label: string;
+    name: string;
+    type: 'text' | 'dropdown';
+    options: string[] | null;
+    is_required: boolean;
+    sort_order: number;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Lead {
     id: number;
     name: string;
@@ -35,5 +48,6 @@ export interface Lead {
     createdAt: string;
     lastContactDate: string;
     notes?: string;
+    custom_fields?: Record<string, any>;
     activities: LeadActivity[];
 }

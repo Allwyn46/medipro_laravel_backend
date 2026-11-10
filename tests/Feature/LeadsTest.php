@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Lead;
+use App\Models\LeadFormField;
 use App\Models\User;
 use Database\Seeders\LeadSeeder;
 
@@ -133,4 +134,102 @@ test('authenticated users can add clinical notes to lead', function () {
     $latestActivity = $freshLead->activities->last();
     expect($latestActivity->type)->toBe('Note')
         ->and($latestActivity->description)->toBe('Patient called to confirm follow-up schedule.');
+});
+
+test('authenticated users can create a new patient lead with custom attributes', function () {
+    $user = User::factory()->create();
+
+    LeadFormField::create([
+        'label' => 'Insurance Provider',
+        'name' => 'insurance_provider',
+        'type' => 'dropdown',
+        'options' => ['Star Health', 'Care Health', 'Self-Pay'],
+        'is_required' => false,
+        'is_active' => true,
+    ]);
+
+    $response = $this->actingAs($user)->postJson(route('leads.store'), [
+        'name' => 'Rahul Sharma',
+        'phone' => '+91 98765 43210',
+        'email' => 'rahul@example.com',
+        'service' => 'Dental Implants & Cosmetic',
+        'doctor' => 'Dr. Eddie Lake',
+        'status' => 'New',
+        'priority' => 'High',
+        'value' => 2500,
+        'source' => 'Staff Booking',
+        'notes' => 'Patient inquired about dental implants financing.',
+        'custom_fields' => [
+            'insurance_provider' => 'Care Health',
+        ],
+    ]);
+
+    $response->assertCreated();
+    $response->assertJson([
+        'success' => true,
+        'lead' => [
+            'name' => 'Rahul Sharma',
+            'phone' => '+91 98765 43210',
+            'service' => 'Dental Implants & Cosmetic',
+            'doctor' => 'Dr. Eddie Lake',
+            'status' => 'New',
+            'priority' => 'High',
+            'value' => 2500,
+            'custom_fields' => [
+                'insurance_provider' => 'Care Health',
+            ],
+        ],
+    ]);
+
+    $this->assertDatabaseHas('leads', [
+        'name' => 'Rahul Sharma',
+        'phone' => '+91 98765 43210',
+    ]);
+
+    $createdLead = Lead::where('name', 'Rahul Sharma')->first();
+    expect($createdLead->custom_fields['insurance_provider'])->toBe('Care Health')
+        ->and($createdLead->activities)->toHaveCount(1)
+        ->and($createdLead->activities->first()->title)->toBe('Lead Created Manually');
+});
+
+test('lead creation enforces dynamic custom field validation rules', function () {
+    $user = User::factory()->create();
+
+    LeadFormField::create([
+        'label' => 'Required Insurance',
+        'name' => 'required_insurance',
+        'type' => 'dropdown',
+        'options' => ['Option A', 'Option B'],
+        'is_required' => true,
+        'is_active' => true,
+    ]);
+
+    // Omit required custom field
+    $response = $this->actingAs($user)->postJson(route('leads.store'), [
+        'name' => 'Amit Patel',
+        'phone' => '+91 98765 11111',
+        'service' => 'Dental Implants & Cosmetic',
+        'doctor' => 'Dr. Eddie Lake',
+        'status' => 'New',
+        'priority' => 'Medium',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['custom_fields.required_insurance']);
+
+    // Pass invalid option to dropdown
+    $response2 = $this->actingAs($user)->postJson(route('leads.store'), [
+        'name' => 'Amit Patel',
+        'phone' => '+91 98765 11111',
+        'service' => 'Dental Implants & Cosmetic',
+        'doctor' => 'Dr. Eddie Lake',
+        'status' => 'New',
+        'priority' => 'Medium',
+        'custom_fields' => [
+            'required_insurance' => 'Invalid Option',
+        ],
+    ]);
+
+    $response2->assertUnprocessable();
+    $response2->assertJsonValidationErrors(['custom_fields.required_insurance']);
 });

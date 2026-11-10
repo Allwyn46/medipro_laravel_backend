@@ -83,6 +83,7 @@ import Layout from "../layout/Layout";
 import type {
     Lead,
     LeadActivity,
+    LeadFormField,
     LeadPriority,
     LeadStatus,
     PaymentStatus,
@@ -215,10 +216,16 @@ const activityColumns = columnHelper.columns([
 export default function SingleLeadPage({
     lead,
     allLeads = [],
+    customFields = [],
 }: {
     lead: Lead;
     allLeads?: Lead[];
+    customFields?: LeadFormField[];
 }) {
+    const getFieldLabel = (key: string) => {
+        const match = customFields.find((f) => f.name === key);
+        return match?.label || key.replace(/_/g, " ");
+    };
     const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(
         lead.status
     );
@@ -638,6 +645,27 @@ export default function SingleLeadPage({
                                         {lead.lastContactDate}
                                     </span>
                                 </div>
+
+                                {lead.custom_fields && Object.keys(lead.custom_fields).length > 0 && (
+                                    <>
+                                        <div className="pt-2 pb-1 border-t mt-1">
+                                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                                Custom Intake Details
+                                            </span>
+                                        </div>
+                                        {Object.entries(lead.custom_fields).map(([key, val]) => (
+                                            <div key={key} className="flex items-center justify-between py-1 border-b last:border-b-0">
+                                                <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                    <TagIcon className="size-3.5 text-primary" />
+                                                    {getFieldLabel(key)}
+                                                </span>
+                                                <span className="font-semibold text-foreground">
+                                                    {String(val || "—")}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
                             </div>
                         </Card>
 

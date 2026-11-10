@@ -4,6 +4,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\LeadFormFieldController;
 use App\Http\Controllers\PipelineController;
 use App\Models\Appointment;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/appointments/reset-demo', [AppointmentController::class, 'resetDemo'])->name('appointments.reset-demo');
 
     // LEAD MANAGEMENT APIS
+    Route::post('/api/leads', [LeadController::class, 'store'])->name('leads.store');
     Route::patch('/api/leads/{id}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
     Route::post('/api/leads/{id}/notes', [LeadController::class, 'addNote'])->name('leads.add-note');
+
+    // SETTINGS & LEAD FORM FIELDS
+    Route::get('/settings/leads', [LeadController::class, 'settings'])->name('settings.leads');
+    Route::get('/api/settings/lead-fields', [LeadFormFieldController::class, 'index'])->name('lead-fields.index');
+    Route::post('/api/settings/lead-fields', [LeadFormFieldController::class, 'store'])->name('lead-fields.store');
+    Route::delete('/api/settings/lead-fields/{id}', [LeadFormFieldController::class, 'destroy'])->name('lead-fields.destroy');
 });

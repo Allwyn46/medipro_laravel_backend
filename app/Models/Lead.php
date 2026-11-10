@@ -41,6 +41,7 @@ class Lead extends Model
         return [
             'value' => 'float',
             'last_contact_date' => 'date',
+            'custom_fields' => 'array',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
