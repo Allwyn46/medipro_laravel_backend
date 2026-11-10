@@ -145,7 +145,7 @@ test('cannot double book an already booked slot for same doctor and date', funct
 });
 
 test('authenticated staff can confirm pending appointment in database', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
     $pending = Appointment::where('status', 'Pending')->first();
 
     $response = $this->actingAs($user)->postJson(route('appointments.confirm', ['id' => $pending->id]));
@@ -159,7 +159,7 @@ test('authenticated staff can confirm pending appointment in database', function
 });
 
 test('authenticated staff can decline appointment in database', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
     $pending = Appointment::where('status', 'Pending')->first();
 
     $response = $this->actingAs($user)->postJson(route('appointments.decline', ['id' => $pending->id]));

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import {
     Dialog,
     DialogClose,
@@ -175,6 +175,24 @@ export function BookAppointmentDialog({
     const open = isControlled ? controlledOpen : internalOpen;
     const setOpen = isControlled ? setControlledOpen! : setInternalOpen;
 
+    const { auth, clinicDoctors } = usePage().props as unknown as {
+        auth?: {
+            user?: { role?: string; name?: string; email?: string };
+            doctor?: { id?: number; name?: string; specialty?: string };
+            role?: string;
+        };
+        clinicDoctors?: Array<{ id: number; name: string; specialty: string; room?: string }>;
+    };
+
+    const isDoctor = auth?.user?.role === "doctor" && !!auth?.doctor;
+    const availableDoctors = clinicDoctors && clinicDoctors.length > 0
+        ? clinicDoctors.map((d) => ({ name: d.name, specialty: d.specialty }))
+        : CLINIC_DOCTORS;
+
+    const initialDoctor = isDoctor && auth?.doctor?.name
+        ? auth.doctor.name
+        : (availableDoctors[0]?.name || CLINIC_SERVICES[0].doctor);
+
     const todayStr = getLocalDateString(0);
 
     const [patientType, setPatientType] = React.useState<"existing" | "new">("existing");
@@ -189,7 +207,7 @@ export function BookAppointmentDialog({
     const [phone, setPhone] = React.useState("");
     const [email, setEmail] = React.useState("");
     const [service, setService] = React.useState(CLINIC_SERVICES[0].title);
-    const [doctor, setDoctor] = React.useState(CLINIC_SERVICES[0].doctor);
+    const [doctor, setDoctor] = React.useState(initialDoctor);
     const [date, setDate] = React.useState(todayStr);
     const [timeSlot, setTimeSlot] = React.useState(() => {
         const firstOpen = APPOINTMENT_TIME_SLOTS.find(
@@ -863,13 +881,17 @@ export function BookAppointmentDialog({
                             <Label className="text-xs font-medium">
                                 Assigned Doctor <span className="text-destructive">*</span>
                             </Label>
-                            <Select value={doctor} onValueChange={(val) => setDoctor(val ?? CLINIC_DOCTORS[0].name)}>
+                            <Select
+                                value={doctor}
+                                onValueChange={(val) => setDoctor(val ?? availableDoctors[0].name)}
+                                disabled={isDoctor}
+                            >
                                 <SelectTrigger className="w-full text-xs h-8">
                                     <SelectValue placeholder="Select specialist" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        {CLINIC_DOCTORS.map((d) => (
+                                        {availableDoctors.map((d) => (
                                             <SelectItem key={d.name} value={d.name} className="text-xs">
                                                 {d.name}
                                             </SelectItem>
@@ -877,6 +899,11 @@ export function BookAppointmentDialog({
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
+                            {isDoctor && (
+                                <span className="text-[10px] text-muted-foreground">
+                                    Assigned to your specialist profile
+                                </span>
+                            )}
                         </div>
                     </div>
 

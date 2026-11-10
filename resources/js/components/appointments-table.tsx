@@ -227,11 +227,24 @@ const columns = columnHelper.columns([
     }),
     columnHelper.accessor("doctor", {
         header: "Specialist",
-        cell: ({ row }) => (
-            <div className="text-xs text-muted-foreground font-medium">
-                {row.original.doctor}
-            </div>
-        ),
+        cell: ({ row }) => {
+            const doc = row.original.doctor;
+            if (!doc || doc === "Unassigned") {
+                return (
+                    <Badge
+                        variant="outline"
+                        className="text-[10px] border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300 font-normal"
+                    >
+                        Unassigned
+                    </Badge>
+                );
+            }
+            return (
+                <div className="text-xs text-muted-foreground font-medium">
+                    {doc}
+                </div>
+            );
+        },
     }),
     columnHelper.accessor("type", {
         header: "Type",

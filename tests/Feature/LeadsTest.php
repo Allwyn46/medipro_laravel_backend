@@ -28,7 +28,7 @@ test('authenticated users can view leads index page', function () {
 });
 
 test('authenticated users can view single lead page', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $response = $this->actingAs($user)->get(route('leads.show', ['id' => 1]));
 
@@ -41,7 +41,7 @@ test('authenticated users can view single lead page', function () {
 });
 
 test('authenticated users receive 404 for non-existent lead', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $this->actingAs($user)->get(route('leads.show', ['id' => 9999]))->assertNotFound();
 });
@@ -90,7 +90,7 @@ test('database has Michael Chen lead with activities', function () {
 });
 
 test('authenticated users can update lead status to Won with total amount and payment status', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
     $lead = Lead::find(1);
 
     $response = $this->actingAs($user)->patchJson(route('leads.update-status', ['id' => $lead->id]), [
@@ -118,7 +118,7 @@ test('authenticated users can update lead status to Won with total amount and pa
 });
 
 test('authenticated users can add clinical notes to lead', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
     $lead = Lead::find(1);
 
     $response = $this->actingAs($user)->postJson(route('leads.add-note', ['id' => $lead->id]), [

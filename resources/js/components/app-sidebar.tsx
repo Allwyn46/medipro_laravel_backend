@@ -1,4 +1,5 @@
 import * as React from "react";
+import { usePage } from "@inertiajs/react";
 
 import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
@@ -33,8 +34,8 @@ import {
 
 const data = {
     user: {
-        name: "shadcn",
-        email: "m@example.com",
+        name: "Clinic Administrator",
+        email: "admin@medipro.com",
         avatar: "/avatars/shadcn.jpg",
     },
     navMain: [
@@ -148,6 +149,24 @@ const data = {
     // ],
 };
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+    const { auth } = usePage().props as unknown as {
+        auth?: {
+            user?: { role?: string; name?: string; email?: string };
+            doctor?: { name?: string; specialty?: string };
+            role?: string;
+        };
+    };
+
+    const isAdmin = auth?.user?.role === "admin" || auth?.role === "admin";
+    const displayName = auth?.doctor?.name || auth?.user?.name || "Clinic Staff";
+    const displayEmail = auth?.doctor?.specialty || (isAdmin ? "Clinic Administrator" : (auth?.user?.email || "staff@medipro.com"));
+
+    const currentUser = {
+        name: displayName,
+        email: displayEmail,
+        avatar: "/avatars/shadcn.jpg",
+    };
+
     return (
         <Sidebar collapsible="offcanvas" {...props}>
             <SidebarHeader>
@@ -173,7 +192,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser user={currentUser} />
             </SidebarFooter>
         </Sidebar>
     );

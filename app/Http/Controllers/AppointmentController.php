@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\Doctor;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use Database\Seeders\AppointmentSeeder;
@@ -44,6 +45,11 @@ class AppointmentController extends Controller
     public function patients(Request $request): JsonResponse
     {
         $query = Lead::query();
+        $user = $request->user();
+
+        if ($user && $user->isDoctor() && $user->doctor) {
+            $query->where('doctor_id', $user->doctor->id);
+        }
 
         if ($search = $request->query('q')) {
             $query->where(function ($q) use ($search) {
@@ -54,7 +60,7 @@ class AppointmentController extends Controller
         }
 
         $patients = $query->orderBy('name')
-            ->select(['id', 'name', 'email', 'phone', 'service', 'doctor', 'status', 'value', 'notes'])
+            ->select(['id', 'name', 'email', 'phone', 'service', 'doctor', 'doctor_id', 'status', 'value', 'notes'])
             ->get();
 
         return response()->json([
@@ -97,15 +103,18 @@ class AppointmentController extends Controller
         }
 
         $leadValue = isset($validated['value']) ? (float) $validated['value'] : 1500;
+        $doctorId = Doctor::where('name', $validated['doctor'])->value('id');
 
         // Find or create matching clinical lead
         $lead = null;
         if (! empty($validated['leadId'])) {
             $lead = Lead::find($validated['leadId']);
             if ($lead) {
-                $lead->update([
-                    'last_contact_date' => now()->format('Y-m-d'),
-                ]);
+                $leadUpdate = ['last_contact_date' => now()->format('Y-m-d')];
+                if (! $lead->doctor_id && $doctorId) {
+                    $leadUpdate['doctor_id'] = $doctorId;
+                }
+                $lead->update($leadUpdate);
             }
         }
 
@@ -117,6 +126,7 @@ class AppointmentController extends Controller
                     'phone' => $validated['patientPhone'],
                     'service' => $validated['service'],
                     'doctor' => $validated['doctor'],
+                    'doctor_id' => $doctorId,
                     'status' => 'New',
                     'priority' => 'High',
                     'value' => $leadValue,
@@ -134,6 +144,7 @@ class AppointmentController extends Controller
             'patient_phone' => $validated['patientPhone'],
             'service' => $validated['service'],
             'doctor' => $validated['doctor'],
+            'doctor_id' => $doctorId,
             'date' => $validated['date'],
             'time' => $validated['time'],
             'status' => 'Pending',
@@ -165,9 +176,14 @@ class AppointmentController extends Controller
     /**
      * Confirm a pending appointment and add to schedule.
      */
-    public function confirm(int $id): JsonResponse
+    public function confirm(Request $request, int $id): JsonResponse
     {
         $appointment = Appointment::findOrFail($id);
+
+        if ($request->user() && $request->user()->cannot('update', $appointment)) {
+            abort(403, 'Unauthorized. You cannot confirm an appointment assigned to another specialist.');
+        }
+
         $appointment->update([
             'status' => 'Confirmed',
             'room' => $appointment->room ?: 'Consultation Suite 1',
@@ -191,9 +207,14 @@ class AppointmentController extends Controller
     /**
      * Decline an appointment request.
      */
-    public function decline(int $id): JsonResponse
+    public function decline(Request $request, int $id): JsonResponse
     {
         $appointment = Appointment::findOrFail($id);
+
+        if ($request->user() && $request->user()->cannot('update', $appointment)) {
+            abort(403, 'Unauthorized. You cannot decline an appointment assigned to another specialist.');
+        }
+
         $appointment->update([
             'status' => 'Cancelled',
         ]);
@@ -207,8 +228,12 @@ class AppointmentController extends Controller
     /**
      * Reset demo appointment requests to defaults.
      */
-    public function resetDemo(): JsonResponse
+    public function resetDemo(Request $request): JsonResponse
     {
+        if ($request->user() && ! $request->user()->isAdmin()) {
+            abort(403, 'Unauthorized. Only administrators can reset demo data.');
+        }
+
         if (Lead::count() === 0) {
             (new LeadSeeder)->run();
         }

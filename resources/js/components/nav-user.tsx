@@ -1,4 +1,4 @@
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     DropdownMenu,
@@ -19,8 +19,7 @@ import {
     EllipsisVerticalIcon,
     CircleUserRoundIcon,
     SettingsIcon,
-    CreditCardIcon,
-    BellIcon,
+    UserPlusIcon,
     LogOutIcon,
 } from "lucide-react";
 
@@ -34,6 +33,26 @@ export function NavUser({
     };
 }) {
     const { isMobile } = useSidebar();
+    const { auth } = usePage().props as unknown as {
+        auth?: {
+            user?: { role?: string; name?: string; email?: string };
+            doctor?: { name?: string; specialty?: string };
+            role?: string;
+        };
+    };
+
+    const isAdmin = auth?.user?.role === "admin" || auth?.role === "admin";
+    const displayName = auth?.doctor?.name || auth?.user?.name || user.name;
+    const displaySub = auth?.doctor?.specialty || (isAdmin ? "Clinic Administrator" : (auth?.user?.email || user.email));
+
+    const initials = displayName
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase() || "CN";
+
     return (
         <SidebarMenu>
             <SidebarMenuItem>
@@ -47,17 +66,17 @@ export function NavUser({
                         }
                     >
                         <Avatar className="size-8 rounded-lg grayscale">
-                            <AvatarImage src={user.avatar} alt={user.name} />
+                            <AvatarImage src={user.avatar} alt={displayName} />
                             <AvatarFallback className="rounded-lg">
-                                CN
+                                {initials}
                             </AvatarFallback>
                         </Avatar>
                         <div className="grid flex-1 text-left text-sm leading-tight">
                             <span className="truncate font-medium">
-                                {user.name}
+                                {displayName}
                             </span>
                             <span className="truncate text-xs text-foreground/70">
-                                {user.email}
+                                {displaySub}
                             </span>
                         </div>
                         <EllipsisVerticalIcon className="ml-auto size-4" />
@@ -74,18 +93,18 @@ export function NavUser({
                                     <Avatar className="size-8">
                                         <AvatarImage
                                             src={user.avatar}
-                                            alt={user.name}
+                                            alt={displayName}
                                         />
                                         <AvatarFallback className="rounded-lg">
-                                            CN
+                                            {initials}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="grid flex-1 text-left text-sm leading-tight">
                                         <span className="truncate font-medium">
-                                            {user.name}
+                                            {displayName}
                                         </span>
                                         <span className="truncate text-xs text-muted-foreground">
-                                            {user.email}
+                                            {displaySub}
                                         </span>
                                     </div>
                                 </div>
@@ -95,15 +114,26 @@ export function NavUser({
                         <DropdownMenuGroup>
                             <DropdownMenuItem>
                                 <CircleUserRoundIcon />
-                                Account
+                                Account ({isAdmin ? "Administrator" : "Doctor"})
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => router.visit("/settings/leads")}
-                                className="cursor-pointer"
-                            >
-                                <SettingsIcon />
-                                Settings
-                            </DropdownMenuItem>
+                            {isAdmin && (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => router.visit("/settings/leads")}
+                                        className="cursor-pointer"
+                                    >
+                                        <SettingsIcon />
+                                        Lead Form Settings
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => router.visit("/settings/doctors")}
+                                        className="cursor-pointer"
+                                    >
+                                        <UserPlusIcon />
+                                        Manage Doctors
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

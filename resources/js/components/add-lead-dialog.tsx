@@ -1,4 +1,5 @@
 import * as React from "react";
+import { usePage } from "@inertiajs/react";
 import {
     UserPlusIcon,
     PhoneIcon,
@@ -86,11 +87,29 @@ export function AddLeadDialog({
     onSuccess,
     customFields: initialCustomFields,
 }: AddLeadDialogProps) {
+    const { auth, clinicDoctors } = usePage().props as unknown as {
+        auth?: {
+            user?: { role?: string; name?: string; email?: string };
+            doctor?: { id?: number; name?: string; specialty?: string };
+            role?: string;
+        };
+        clinicDoctors?: Array<{ id: number; name: string; specialty: string }>;
+    };
+
+    const isDoctor = auth?.user?.role === "doctor" && !!auth?.doctor;
+    const availableDoctors = clinicDoctors && clinicDoctors.length > 0
+        ? clinicDoctors.map((d) => ({ name: d.name, role: d.specialty }))
+        : CLINIC_DOCTORS;
+
+    const initialDoctor = isDoctor && auth?.doctor?.name
+        ? auth.doctor.name
+        : (availableDoctors[0]?.name || CLINICAL_SERVICES[0].doctor);
+
     const [name, setName] = React.useState("");
     const [phone, setPhone] = React.useState("");
     const [email, setEmail] = React.useState("");
     const [service, setService] = React.useState(CLINICAL_SERVICES[0].title);
-    const [doctor, setDoctor] = React.useState(CLINICAL_SERVICES[0].doctor);
+    const [doctor, setDoctor] = React.useState(initialDoctor);
     const [status, setStatus] = React.useState<LeadStatus>("New");
     const [priority, setPriority] = React.useState<LeadPriority>("Medium");
     const [value, setValue] = React.useState<number | string>(1500);
@@ -366,14 +385,15 @@ export function AddLeadDialog({
                             </Label>
                             <Select
                                 value={doctor}
-                                onValueChange={(val) => setDoctor(val ?? CLINIC_DOCTORS[0].name)}
+                                onValueChange={(val) => setDoctor(val ?? availableDoctors[0].name)}
+                                disabled={isDoctor}
                             >
                                 <SelectTrigger className="w-full text-xs h-8">
                                     <SelectValue placeholder="Select specialist" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        {CLINIC_DOCTORS.map((d) => (
+                                        {availableDoctors.map((d) => (
                                             <SelectItem key={d.name} value={d.name} className="text-xs">
                                                 {d.name}
                                             </SelectItem>
@@ -381,6 +401,11 @@ export function AddLeadDialog({
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
+                            {isDoctor && (
+                                <span className="text-[10px] text-muted-foreground">
+                                    Assigned to your specialist profile
+                                </span>
+                            )}
                         </div>
                     </div>
 

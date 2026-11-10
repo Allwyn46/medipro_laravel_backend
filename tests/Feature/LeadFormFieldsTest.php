@@ -13,8 +13,8 @@ test('unauthenticated users cannot access settings or lead fields API', function
     $this->deleteJson(route('lead-fields.destroy', ['id' => 1]))->assertUnauthorized();
 });
 
-test('authenticated users can view settings page with fields', function () {
-    $user = User::factory()->create();
+test('authenticated admin can view settings page with fields', function () {
+    $user = User::factory()->admin()->create();
 
     LeadFormField::create([
         'label' => 'Insurance Carrier',
@@ -33,8 +33,19 @@ test('authenticated users can view settings page with fields', function () {
     );
 });
 
-test('authenticated users can list active lead form fields', function () {
-    $user = User::factory()->create();
+test('doctors cannot access lead settings or lead fields API', function () {
+    $doctorUser = User::factory()->doctor()->create();
+
+    $this->actingAs($doctorUser)->get(route('settings.leads'))->assertForbidden();
+    $this->actingAs($doctorUser)->getJson(route('lead-fields.index'))->assertForbidden();
+    $this->actingAs($doctorUser)->postJson(route('lead-fields.store'), [
+        'label' => 'Specialty Field',
+        'type' => 'text',
+    ])->assertForbidden();
+});
+
+test('authenticated admin can list active lead form fields', function () {
+    $user = User::factory()->admin()->create();
 
     LeadFormField::create([
         'label' => 'Active Text Field',
@@ -60,8 +71,8 @@ test('authenticated users can list active lead form fields', function () {
         ->and($response->json('fields.0.name'))->toBe('active_text');
 });
 
-test('authenticated users can create a text custom field', function () {
-    $user = User::factory()->create();
+test('authenticated admin can create a text custom field', function () {
+    $user = User::factory()->admin()->create();
 
     $response = $this->actingAs($user)->postJson(route('lead-fields.store'), [
         'label' => 'Chief Complaint',
@@ -88,8 +99,8 @@ test('authenticated users can create a text custom field', function () {
     ]);
 });
 
-test('authenticated users can create a dropdown custom field with options', function () {
-    $user = User::factory()->create();
+test('authenticated admin can create a dropdown custom field with options', function () {
+    $user = User::factory()->admin()->create();
 
     $response = $this->actingAs($user)->postJson(route('lead-fields.store'), [
         'label' => 'Insurance Provider',
@@ -118,7 +129,7 @@ test('authenticated users can create a dropdown custom field with options', func
 });
 
 test('validation rejects dropdown field without options', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $response = $this->actingAs($user)->postJson(route('lead-fields.store'), [
         'label' => 'Insurance Provider',
@@ -130,8 +141,8 @@ test('validation rejects dropdown field without options', function () {
     $response->assertJsonValidationErrors(['options']);
 });
 
-test('authenticated users can deactivate a custom field', function () {
-    $user = User::factory()->create();
+test('authenticated admin can deactivate a custom field', function () {
+    $user = User::factory()->admin()->create();
 
     $field = LeadFormField::create([
         'label' => 'Deprecated Field',

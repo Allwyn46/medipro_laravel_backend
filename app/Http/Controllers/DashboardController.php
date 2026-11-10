@@ -14,16 +14,35 @@ class DashboardController extends Controller
      */
     public function index(): Response
     {
-        $allLeadsValue = (float) Lead::sum('value');
-        $newAppointmentsCount = Appointment::where('status', '!=', 'Cancelled')->count();
-        $todayAppointmentsCount = Appointment::where('date', 'Today')->where('status', '!=', 'Cancelled')->count();
-        $activeLeadsCount = Lead::whereNotIn('status', ['Won', 'Lost'])->count();
-        $awaitingConsultationCount = Lead::where('status', 'Consultation Scheduled')->count();
+        $user = auth()->user();
+        $isDoctor = $user && $user->isDoctor();
+        $doctorId = $isDoctor ? $user->doctor?->id : null;
+
+        $leadsQuery = Lead::query();
+        $appointmentsQuery = Appointment::query();
+
+        if ($isDoctor) {
+            $leadsQuery->where('doctor_id', $doctorId);
+            $appointmentsQuery->where('doctor_id', $doctorId);
+        }
+
+        $wonRevenue = (float) (clone $leadsQuery)->where('status', 'Won')->sum('value');
+        $allValue = (float) (clone $leadsQuery)->sum('value');
+        $revenue = $wonRevenue > 0 ? $wonRevenue : $allValue;
+
+        $newAppointmentsCount = (clone $appointmentsQuery)->where('status', '!=', 'Cancelled')->count();
+        $todayAppointmentsCount = (clone $appointmentsQuery)->where('date', 'Today')->where('status', '!=', 'Cancelled')->count();
+        $activeLeadsCount = (clone $leadsQuery)->whereNotIn('status', ['Won', 'Lost'])->count();
+        $awaitingConsultationCount = (clone $leadsQuery)->where('status', 'Consultation Scheduled')->count();
+
+        $revenueTitle = $isDoctor ? 'My Consultation Revenue' : 'Total Clinic Revenue';
+        $appointmentsSubtext = $isDoctor ? 'Assigned to your clinic schedule' : 'Across all clinic specialists';
+        $leadsTitle = $isDoctor ? 'My Patient Leads' : 'Active Patient Leads';
 
         $metrics = [
             [
-                'title' => 'Total Clinic Revenue',
-                'value' => '₹'.number_format($allLeadsValue, 2),
+                'title' => $revenueTitle,
+                'value' => '₹'.number_format($revenue, 2),
                 'badgeText' => '+14.5%',
                 'badgeTrend' => 'up',
                 'footerTrendText' => 'Trending up this month',
@@ -35,10 +54,10 @@ class DashboardController extends Controller
                 'badgeText' => '+18.2%',
                 'badgeTrend' => 'up',
                 'footerTrendText' => "{$todayAppointmentsCount} scheduled for today",
-                'footerSubtext' => 'Across all clinic specialists',
+                'footerSubtext' => $appointmentsSubtext,
             ],
             [
-                'title' => 'Active Patient Leads',
+                'title' => $leadsTitle,
                 'value' => (string) $activeLeadsCount,
                 'badgeText' => '+9.4%',
                 'badgeTrend' => 'up',
@@ -55,11 +74,13 @@ class DashboardController extends Controller
             ],
         ];
 
-        $appointments = Appointment::where('status', '!=', 'Pending')
+        $appointments = (clone $appointmentsQuery)
+            ->where('status', '!=', 'Pending')
             ->orderBy('id')
             ->get();
 
-        $pendingAppointments = Appointment::where('status', 'Pending')
+        $pendingAppointments = (clone $appointmentsQuery)
+            ->where('status', 'Pending')
             ->orderByDesc('id')
             ->get();
 

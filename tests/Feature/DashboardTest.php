@@ -19,7 +19,7 @@ test('unauthenticated users cannot view dashboard', function () {
 });
 
 test('authenticated users can view dashboard with database metrics and appointments', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -33,9 +33,10 @@ test('authenticated users can view dashboard with database metrics and appointme
 });
 
 test('dashboard metrics match database totals', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
-    $totalRevenue = Lead::sum('value');
+    $wonRevenue = Lead::where('status', 'Won')->sum('value');
+    $totalRevenue = $wonRevenue > 0 ? $wonRevenue : Lead::sum('value');
     $activeLeadsCount = Lead::whereNotIn('status', ['Won', 'Lost'])->count();
 
     $response = $this->actingAs($user)->get(route('dashboard'));
@@ -54,7 +55,7 @@ test('authenticated users can view dashboard when database is completely empty',
     LeadActivity::query()->delete();
     Lead::query()->delete();
 
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $response = $this->actingAs($user)->get(route('dashboard'));
 

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Doctor;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadFormField;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -34,6 +36,10 @@ class LeadController extends Controller
 
         if (! $lead) {
             abort(404, 'Lead not found');
+        }
+
+        if (auth()->user()?->cannot('view', $lead)) {
+            abort(403, 'Unauthorized. You do not have access to this patient lead.');
         }
 
         return Inertia::render('leads/show', [
@@ -91,7 +97,14 @@ class LeadController extends Controller
             $rules["custom_fields.{$field->name}"] = $fieldRules;
         }
 
+        $rules['doctor_id'] = ['nullable', 'integer', 'exists:doctors,id'];
+
         $validated = $request->validate($rules);
+
+        $doctorId = $validated['doctor_id'] ?? null;
+        if (! $doctorId && ! empty($validated['doctor'])) {
+            $doctorId = Doctor::where('name', $validated['doctor'])->value('id');
+        }
 
         $lead = Lead::create([
             'name' => $validated['name'],
@@ -99,6 +112,7 @@ class LeadController extends Controller
             'phone' => $validated['phone'],
             'service' => $validated['service'],
             'doctor' => $validated['doctor'],
+            'doctor_id' => $doctorId,
             'status' => $validated['status'] ?? 'New',
             'priority' => $validated['priority'] ?? 'Medium',
             'value' => isset($validated['value']) ? (float) $validated['value'] : 1500.00,
@@ -130,9 +144,16 @@ class LeadController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    public static function getLeads(): array
+    public static function getLeads(?User $user = null): array
     {
-        return Lead::with('activities')->orderBy('id')->get()->toArray();
+        $user = $user ?? auth()->user();
+        $query = Lead::with('activities')->orderBy('id');
+
+        if ($user && $user->isDoctor() && $user->doctor) {
+            $query->where('doctor_id', $user->doctor->id);
+        }
+
+        return $query->get()->toArray();
     }
 
     /**
@@ -141,6 +162,10 @@ class LeadController extends Controller
     public function updateStatus(Request $request, int $id): JsonResponse
     {
         $lead = Lead::findOrFail($id);
+
+        if ($request->user()->cannot('update', $lead)) {
+            abort(403, 'Unauthorized. You cannot modify a lead assigned to another specialist.');
+        }
 
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:New,Contacted,Consultation Scheduled,Treatment Plan Sent,Won,Lost'],
@@ -199,6 +224,10 @@ class LeadController extends Controller
     public function addNote(Request $request, int $id): JsonResponse
     {
         $lead = Lead::findOrFail($id);
+
+        if ($request->user()->cannot('update', $lead)) {
+            abort(403, 'Unauthorized. You cannot add notes to a lead assigned to another specialist.');
+        }
 
         $validated = $request->validate([
             'note' => ['required', 'string', 'max:2000'],

@@ -43,6 +43,16 @@ class Appointment extends Model
         return $this->belongsTo(Lead::class);
     }
 
+    /**
+     * Get the doctor associated with this appointment.
+     *
+     * @return BelongsTo<Doctor, $this>
+     */
+    public function doctorProfile(): BelongsTo
+    {
+        return $this->belongsTo(Doctor::class, 'doctor_id');
+    }
+
     public function getPatientNameAttribute(): ?string
     {
         return $this->attributes['patient_name'] ?? null;

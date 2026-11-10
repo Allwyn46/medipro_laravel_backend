@@ -3,6 +3,7 @@
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadFormFieldController;
 use App\Http\Controllers\PipelineController;
@@ -22,9 +23,10 @@ Route::get('/', function () {
 Route::get('/staff', fn () => auth()->check() ? redirect()->route('dashboard') : redirect()->route('login'))->name('staff.portal');
 Route::inertia('/error', 'ErrorPages/wentWrong')->name('error');
 
-// PUBLIC APPOINTMENT APIS
+// PUBLIC APPOINTMENT & DOCTOR APIS
 Route::post('/api/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
 Route::get('/api/appointments/booked-slots', [AppointmentController::class, 'bookedSlots'])->name('appointments.booked-slots');
+Route::get('/api/doctors', [DoctorController::class, 'index'])->name('doctors.index');
 
 // AUTH ROUTES
 Route::middleware('guest')->group(function () {
@@ -43,16 +45,26 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/patients', [AppointmentController::class, 'patients'])->name('patients.index');
     Route::post('/api/appointments/{id}/confirm', [AppointmentController::class, 'confirm'])->name('appointments.confirm');
     Route::post('/api/appointments/{id}/decline', [AppointmentController::class, 'decline'])->name('appointments.decline');
-    Route::post('/api/appointments/reset-demo', [AppointmentController::class, 'resetDemo'])->name('appointments.reset-demo');
 
     // LEAD MANAGEMENT APIS
     Route::post('/api/leads', [LeadController::class, 'store'])->name('leads.store');
     Route::patch('/api/leads/{id}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
     Route::post('/api/leads/{id}/notes', [LeadController::class, 'addNote'])->name('leads.add-note');
 
-    // SETTINGS & LEAD FORM FIELDS
-    Route::get('/settings/leads', [LeadController::class, 'settings'])->name('settings.leads');
-    Route::get('/api/settings/lead-fields', [LeadFormFieldController::class, 'index'])->name('lead-fields.index');
-    Route::post('/api/settings/lead-fields', [LeadFormFieldController::class, 'store'])->name('lead-fields.store');
-    Route::delete('/api/settings/lead-fields/{id}', [LeadFormFieldController::class, 'destroy'])->name('lead-fields.destroy');
+    // ADMIN ONLY ROUTES
+    Route::middleware('admin')->group(function () {
+        Route::post('/api/appointments/reset-demo', [AppointmentController::class, 'resetDemo'])->name('appointments.reset-demo');
+
+        // SETTINGS & LEAD FORM FIELDS
+        Route::get('/settings/leads', [LeadController::class, 'settings'])->name('settings.leads');
+        Route::get('/api/settings/lead-fields', [LeadFormFieldController::class, 'index'])->name('lead-fields.index');
+        Route::post('/api/settings/lead-fields', [LeadFormFieldController::class, 'store'])->name('lead-fields.store');
+        Route::delete('/api/settings/lead-fields/{id}', [LeadFormFieldController::class, 'destroy'])->name('lead-fields.destroy');
+
+        // DOCTOR MANAGEMENT
+        Route::get('/settings/doctors', [DoctorController::class, 'settings'])->name('settings.doctors');
+        Route::post('/api/doctors', [DoctorController::class, 'store'])->name('doctors.store');
+        Route::patch('/api/doctors/{id}', [DoctorController::class, 'update'])->name('doctors.update');
+        Route::delete('/api/doctors/{id}', [DoctorController::class, 'destroy'])->name('doctors.destroy');
+    });
 });

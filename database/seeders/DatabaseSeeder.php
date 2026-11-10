@@ -23,8 +23,10 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
+            DoctorSeeder::class,
             LeadSeeder::class,
             AppointmentSeeder::class,
+            DoctorSeeder::class, // Run again to ensure backfilling of leads and appointments
         ]);
     }
 }
