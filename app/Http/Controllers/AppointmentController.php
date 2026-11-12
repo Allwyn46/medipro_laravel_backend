@@ -138,6 +138,9 @@ class AppointmentController extends Controller
             );
         }
 
+        $patientToken = \Illuminate\Support\Str::random(40);
+        $doctorToken = \Illuminate\Support\Str::random(40);
+
         $appointment = Appointment::create([
             'patient_name' => $validated['patientName'],
             'patient_email' => $validated['patientEmail'],
@@ -155,22 +158,106 @@ class AppointmentController extends Controller
             'notes' => $validated['notes'] ?? null,
             'source' => $validated['source'] ?? 'Website Booking',
             'requested_at' => 'Just now',
+            'patient_token' => $patientToken,
+            'doctor_token' => $doctorToken,
         ]);
+
+        // Send 1-week reminder email with confirmation button to both patient and doctor
+        if ($appointment->shouldSendReminder()) {
+            $appointment->sendConfirmationReminders();
+        }
 
         LeadActivity::create([
             'lead_id' => $lead->id,
             'type' => 'Consultation',
-            'title' => 'Appointment Booked',
-            'description' => "Scheduled consultation for {$validated['date']} at {$validated['time']} with {$validated['doctor']}.",
+            'title' => 'Appointment Scheduled',
+            'description' => "Scheduled consultation for {$validated['date']} at {$validated['time']} with {$validated['doctor']}. Confirmation reminder sent via email.",
             'doctor' => $validated['doctor'],
             'date' => now()->format('Y-m-d H:i'),
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Appointment booked successfully.',
-            'appointment' => $appointment,
+            'message' => 'Appointment scheduled successfully. Confirmation reminders have been sent.',
+            'appointment' => $appointment->fresh(),
         ], 201);
+    }
+
+    /**
+     * Confirm an appointment via email button link (Patient or Doctor).
+     */
+    public function confirmViaEmail(Request $request, string $token): \Inertia\Response
+    {
+        $appointment = Appointment::where('patient_token', $token)
+            ->orWhere('doctor_token', $token)
+            ->firstOrFail();
+
+        $isPatient = $appointment->patient_token === $token;
+        $role = $isPatient ? 'patient' : 'doctor';
+
+        $alreadyConfirmed = $isPatient
+            ? ($appointment->patient_confirmed_at !== null)
+            : ($appointment->doctor_confirmed_at !== null);
+
+        if (! $alreadyConfirmed) {
+            if ($isPatient) {
+                $appointment->update(['patient_confirmed_at' => now()]);
+                if ($appointment->lead_id) {
+                    LeadActivity::create([
+                        'lead_id' => $appointment->lead_id,
+                        'type' => 'Consultation',
+                        'title' => 'Patient Confirmed Appointment',
+                        'description' => "Patient ({$appointment->patient_name}) confirmed upcoming consultation via email.",
+                        'doctor' => $appointment->doctor,
+                        'date' => now()->format('Y-m-d H:i'),
+                    ]);
+                }
+            } else {
+                $appointment->update(['doctor_confirmed_at' => now()]);
+                if ($appointment->lead_id) {
+                    LeadActivity::create([
+                        'lead_id' => $appointment->lead_id,
+                        'type' => 'Consultation',
+                        'title' => 'Doctor Confirmed Appointment',
+                        'description' => "Doctor ({$appointment->doctor}) confirmed upcoming consultation availability via email.",
+                        'doctor' => $appointment->doctor,
+                        'date' => now()->format('Y-m-d H:i'),
+                    ]);
+                }
+            }
+        }
+
+        $fresh = $appointment->fresh();
+        $bothConfirmed = $fresh->patient_confirmed_at !== null && $fresh->doctor_confirmed_at !== null;
+
+        if ($bothConfirmed && $fresh->status !== 'Confirmed') {
+            $fresh->update([
+                'status' => 'Confirmed',
+                'room' => $fresh->room ?: 'Consultation Suite 1',
+                'duration' => $fresh->duration ?: '45 mins',
+            ]);
+
+            if ($fresh->lead_id) {
+                Lead::where('id', $fresh->lead_id)->update(['status' => 'Consultation Scheduled']);
+                LeadActivity::create([
+                    'lead_id' => $fresh->lead_id,
+                    'type' => 'Consultation',
+                    'title' => 'Appointment Booked & Confirmed',
+                    'description' => "Both patient and doctor confirmed. Appointment officially booked for {$fresh->date} at {$fresh->time}.",
+                    'doctor' => $fresh->doctor,
+                    'date' => now()->format('Y-m-d H:i'),
+                ]);
+            }
+        }
+
+        return \Inertia\Inertia::render('appointments/confirmed', [
+            'appointment' => $fresh,
+            'role' => $role,
+            'bothConfirmed' => $bothConfirmed,
+            'alreadyConfirmed' => $alreadyConfirmed,
+            'patientConfirmed' => (bool) $fresh->patient_confirmed_at,
+            'doctorConfirmed' => (bool) $fresh->doctor_confirmed_at,
+        ]);
     }
 
     /**

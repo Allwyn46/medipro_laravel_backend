@@ -27,6 +27,7 @@ Route::inertia('/error', 'ErrorPages/wentWrong')->name('error');
 Route::post('/api/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
 Route::get('/api/appointments/booked-slots', [AppointmentController::class, 'bookedSlots'])->name('appointments.booked-slots');
 Route::get('/api/doctors', [DoctorController::class, 'index'])->name('doctors.index');
+Route::get('/appointments/confirm-email/{token}', [AppointmentController::class, 'confirmViaEmail'])->name('appointments.email-confirm');
 
 // AUTH ROUTES
 Route::middleware('guest')->group(function () {

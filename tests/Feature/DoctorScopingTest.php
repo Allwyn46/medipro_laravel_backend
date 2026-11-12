@@ -16,15 +16,20 @@ beforeEach(function () {
     (new DoctorSeeder)->run();
 });
 
-test('admin can view clinic-wide dashboard and see total clinic revenue', function () {
+test('admin can view clinic-wide dashboard and see total clinic revenue matching doctor breakdown', function () {
     $admin = User::where('role', 'admin')->first();
 
     $response = $this->actingAs($admin)->get(route('dashboard'));
 
     $response->assertOk();
     $metrics = $response->viewData('page')['props']['metrics'];
+    $doctorRevenues = $response->viewData('page')['props']['doctorRevenues'];
 
-    expect($metrics[0]['title'])->toBe('Total Clinic Revenue');
+    $sumDoctorRevenues = array_sum(array_column($doctorRevenues, 'revenue'));
+
+    expect($metrics[0]['title'])->toBe('Total Clinic Revenue')
+        ->and($metrics[0]['value'])->toBe('₹'.number_format($sumDoctorRevenues, 2))
+        ->and($metrics[0]['value'])->toBe('₹25,050.00');
 });
 
 test('doctor sees scoped dashboard with only their assigned revenue and appointments', function () {
@@ -214,4 +219,50 @@ test('doctors cannot access doctor management settings', function () {
         'name' => 'Dr. Intruder',
         'email' => 'intruder@medipro.com',
     ])->assertForbidden();
+});
+
+test('admin dashboard includes doctor wise revenue breakdown', function () {
+    $admin = User::where('role', 'admin')->first();
+
+    $response = $this->actingAs($admin)->get(route('dashboard'));
+    $response->assertOk();
+
+    $doctorRevenues = $response->viewData('page')['props']['doctorRevenues'];
+    expect($doctorRevenues)->not->toBeEmpty();
+
+    $names = array_column($doctorRevenues, 'name');
+    expect($names)->toContain('Dr. Jamik Tashpulatov')
+        ->and($names)->toContain('Dr. Eddie Lake');
+});
+
+test('doctor dashboard excludes doctor wise revenue breakdown and shows only their revenue', function () {
+    $doctorUser = User::where('email', 'eddie.lake@medipro.com')->first();
+    $otherDoctor = Doctor::where('id', '!=', $doctorUser->doctor->id)->first();
+
+    // Doctor visits dashboard normally
+    $response = $this->actingAs($doctorUser)->get(route('dashboard'));
+    $response->assertOk();
+
+    $doctorRevenues = $response->viewData('page')['props']['doctorRevenues'];
+    expect($doctorRevenues)->toBeEmpty();
+
+    // Doctor attempts to tamper with doctor_id query param to see another doctor's revenue
+    $tamperedResponse = $this->actingAs($doctorUser)->get(route('dashboard', ['doctor_id' => $otherDoctor->id]));
+    $tamperedResponse->assertOk();
+
+    $metrics = $tamperedResponse->viewData('page')['props']['metrics'];
+    expect($metrics[0]['title'])->toBe('My Consultation Revenue')
+        ->and($metrics[0]['value'])->toBe('₹5,600.00');
+});
+
+test('admin can filter dashboard by specific doctor id', function () {
+    $admin = User::where('role', 'admin')->first();
+    $jamik = Doctor::where('name', 'Dr. Jamik Tashpulatov')->first();
+
+    $response = $this->actingAs($admin)->get(route('dashboard', ['doctor_id' => $jamik->id]));
+    $response->assertOk();
+
+    $metrics = $response->viewData('page')['props']['metrics'];
+    expect($metrics[0]['title'])->toContain("Dr. Jamik Tashpulatov's Revenue")
+        ->and($metrics[0]['value'])->toBe('₹8,600.00');
 });

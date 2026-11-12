@@ -598,7 +598,7 @@ export default function SingleLeadPage({
                                     className="bg-primary text-primary-foreground cursor-pointer shadow-xs"
                                 >
                                     <CalendarIcon className="size-3.5 mr-1.5" />
-                                    Book an Appointment
+                                    Schedule an Appointment
                                 </Button>
                             }
                         />

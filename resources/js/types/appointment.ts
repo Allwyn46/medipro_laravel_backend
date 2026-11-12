@@ -17,8 +17,12 @@ export interface Appointment {
     patientName: string;
     patientEmail: string;
     patientPhone: string;
+    patient_name?: string;
+    patient_email?: string;
+    patient_phone?: string;
     service: string;
     doctor: string;
+    doctor_id?: number;
     date: string;
     time: string;
     dateTimeFormatted?: string;
@@ -27,7 +31,12 @@ export interface Appointment {
     room?: string;
     duration?: string;
     leadId?: number;
+    lead_id?: number;
     notes?: string;
     source?: string;
     requestedAt?: string;
+    patientConfirmedAt?: string | null;
+    doctorConfirmedAt?: string | null;
+    isFullyConfirmed?: boolean;
+    confirmationStatus?: string;
 }
