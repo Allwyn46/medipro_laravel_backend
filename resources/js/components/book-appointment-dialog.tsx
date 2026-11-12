@@ -42,10 +42,23 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+export interface BookAppointmentDialogInitialData {
+    patientType?: "existing" | "new";
+    patientId?: number;
+    patientName?: string;
+    phone?: string;
+    email?: string;
+    service?: string;
+    doctor?: string;
+    notes?: string;
+}
+
 export interface BookAppointmentDialogProps {
     trigger?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
+    initialData?: BookAppointmentDialogInitialData;
+    onSuccess?: () => void;
 }
 
 export const CLINIC_SERVICES = [
@@ -169,6 +182,8 @@ export function BookAppointmentDialog({
     trigger,
     open: controlledOpen,
     onOpenChange: setControlledOpen,
+    initialData,
+    onSuccess,
 }: BookAppointmentDialogProps) {
     const [internalOpen, setInternalOpen] = React.useState(false);
     const isControlled = controlledOpen !== undefined;
@@ -195,19 +210,31 @@ export function BookAppointmentDialog({
 
     const todayStr = getLocalDateString(0);
 
-    const [patientType, setPatientType] = React.useState<"existing" | "new">("existing");
+    const [patientType, setPatientType] = React.useState<"existing" | "new">(
+        initialData?.patientType || "existing"
+    );
     const [existingPatients, setExistingPatients] = React.useState<ExistingPatientItem[]>([]);
     const [isLoadingPatients, setIsLoadingPatients] = React.useState(false);
-    const [searchQuery, setSearchQuery] = React.useState("");
-    const [selectedPatientId, setSelectedPatientId] = React.useState<number | null>(null);
+    const [searchQuery, setSearchQuery] = React.useState(
+        initialData?.patientName || ""
+    );
+    const [selectedPatientId, setSelectedPatientId] = React.useState<number | null>(
+        initialData?.patientId ?? null
+    );
     const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
     const dropdownContainerRef = React.useRef<HTMLDivElement>(null);
 
-    const [patientName, setPatientName] = React.useState("");
-    const [phone, setPhone] = React.useState("");
-    const [email, setEmail] = React.useState("");
-    const [service, setService] = React.useState(CLINIC_SERVICES[0].title);
-    const [doctor, setDoctor] = React.useState(initialDoctor);
+    const [patientName, setPatientName] = React.useState(
+        initialData?.patientName || ""
+    );
+    const [phone, setPhone] = React.useState(initialData?.phone || "");
+    const [email, setEmail] = React.useState(initialData?.email || "");
+    const [service, setService] = React.useState(
+        initialData?.service || CLINIC_SERVICES[0].title
+    );
+    const [doctor, setDoctor] = React.useState(
+        initialData?.doctor || initialDoctor
+    );
     const [date, setDate] = React.useState(todayStr);
     const [timeSlot, setTimeSlot] = React.useState(() => {
         const firstOpen = APPOINTMENT_TIME_SLOTS.find(
@@ -215,7 +242,7 @@ export function BookAppointmentDialog({
         );
         return firstOpen ? firstOpen.time : "";
     });
-    const [notes, setNotes] = React.useState("");
+    const [notes, setNotes] = React.useState(initialData?.notes || "");
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [bookedSlots, setBookedSlots] = React.useState<
         Array<{ doctor: string; date: string; time: string; status: string }>
@@ -248,6 +275,24 @@ export function BookAppointmentDialog({
             isMounted = false;
         };
     }, [open]);
+
+    // Sync initialData whenever dialog opens or initialData changes
+    React.useEffect(() => {
+        if (!open) return;
+        if (initialData) {
+            if (initialData.patientType) setPatientType(initialData.patientType);
+            if (initialData.patientId !== undefined) setSelectedPatientId(initialData.patientId);
+            if (initialData.patientName) {
+                setPatientName(initialData.patientName);
+                setSearchQuery(initialData.patientName);
+            }
+            if (initialData.phone) setPhone(initialData.phone);
+            if (initialData.email !== undefined) setEmail(initialData.email);
+            if (initialData.service) setService(initialData.service);
+            if (initialData.doctor) setDoctor(initialData.doctor);
+            if (initialData.notes !== undefined) setNotes(initialData.notes);
+        }
+    }, [open, initialData]);
 
     // Close dropdown on outside click
     React.useEffect(() => {
@@ -283,8 +328,20 @@ export function BookAppointmentDialog({
 
     const selectedPatient = React.useMemo(() => {
         if (!selectedPatientId) return null;
-        return existingPatients.find((p) => p.id === selectedPatientId) || null;
-    }, [existingPatients, selectedPatientId]);
+        const found = existingPatients.find((p) => p.id === selectedPatientId);
+        if (found) return found;
+        if (patientName) {
+            return {
+                id: selectedPatientId,
+                name: patientName,
+                phone: phone,
+                email: email,
+                service: service,
+                doctor: doctor,
+            } as ExistingPatientItem;
+        }
+        return null;
+    }, [existingPatients, selectedPatientId, patientName, phone, email, service, doctor]);
 
     const handleSelectPatient = (patient: ExistingPatientItem) => {
         setSelectedPatientId(patient.id);
@@ -392,21 +449,39 @@ export function BookAppointmentDialog({
     }, [doctor, date, timeSlot, checkIsSlotBooked, open]);
 
     const resetForm = () => {
-        setPatientType("existing");
-        setSelectedPatientId(null);
-        setSearchQuery("");
-        setIsDropdownOpen(false);
-        setPatientName("");
-        setPhone("");
-        setEmail("");
-        setService(CLINIC_SERVICES[0].title);
-        setDoctor(CLINIC_SERVICES[0].doctor);
-        setDate(todayStr);
-        const firstOpen = APPOINTMENT_TIME_SLOTS.find(
-            (s) => !isSlotPast(s.time, todayStr)
-        );
-        setTimeSlot(firstOpen ? firstOpen.time : "");
-        setNotes("");
+        if (initialData) {
+            setPatientType(initialData.patientType || "existing");
+            setSelectedPatientId(initialData.patientId ?? null);
+            setSearchQuery(initialData.patientName || "");
+            setIsDropdownOpen(false);
+            setPatientName(initialData.patientName || "");
+            setPhone(initialData.phone || "");
+            setEmail(initialData.email || "");
+            setService(initialData.service || CLINIC_SERVICES[0].title);
+            setDoctor(initialData.doctor || initialDoctor);
+            setDate(todayStr);
+            const firstOpen = APPOINTMENT_TIME_SLOTS.find(
+                (s) => !isSlotPast(s.time, todayStr)
+            );
+            setTimeSlot(firstOpen ? firstOpen.time : "");
+            setNotes(initialData.notes || "");
+        } else {
+            setPatientType("existing");
+            setSelectedPatientId(null);
+            setSearchQuery("");
+            setIsDropdownOpen(false);
+            setPatientName("");
+            setPhone("");
+            setEmail("");
+            setService(CLINIC_SERVICES[0].title);
+            setDoctor(initialDoctor);
+            setDate(todayStr);
+            const firstOpen = APPOINTMENT_TIME_SLOTS.find(
+                (s) => !isSlotPast(s.time, todayStr)
+            );
+            setTimeSlot(firstOpen ? firstOpen.time : "");
+            setNotes("");
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -499,7 +574,11 @@ export function BookAppointmentDialog({
                 window.dispatchEvent(new Event("medi_appointments_updated"));
             }
 
-            router.reload({ only: ["appointments", "pendingAppointments", "metrics"] });
+            if (onSuccess) {
+                onSuccess();
+            } else {
+                router.reload({ only: ["appointments", "pendingAppointments", "metrics"] });
+            }
             setOpen(false);
             resetForm();
         } catch (error: any) {
@@ -872,6 +951,11 @@ export function BookAppointmentDialog({
                                                 {s.title}
                                             </SelectItem>
                                         ))}
+                                        {!CLINIC_SERVICES.some((s) => s.title === service) && service && (
+                                            <SelectItem value={service} className="text-xs">
+                                                {service}
+                                            </SelectItem>
+                                        )}
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
@@ -896,6 +980,11 @@ export function BookAppointmentDialog({
                                                 {d.name}
                                             </SelectItem>
                                         ))}
+                                        {!availableDoctors.some((d) => d.name === doctor) && doctor && (
+                                            <SelectItem value={doctor} className="text-xs">
+                                                {doctor}
+                                            </SelectItem>
+                                        )}
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>

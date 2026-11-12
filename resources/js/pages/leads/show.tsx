@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import {
     columnFilteringFeature,
     columnVisibilityFeature,
@@ -31,6 +31,7 @@ import {
     ActivityIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
+    ChevronDownIcon,
     StethoscopeIcon,
     CreditCardIcon,
     TrophyIcon,
@@ -38,6 +39,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BookAppointmentDialog } from "@/components/book-appointment-dialog";
 import {
     Card,
     CardHeader,
@@ -244,6 +246,15 @@ export default function SingleLeadPage({
     ]);
     const [newNote, setNewNote] = React.useState("");
     const [isSavingNote, setIsSavingNote] = React.useState(false);
+
+    React.useEffect(() => {
+        setCurrentStatus(lead.status);
+        setCurrentValue(Number(lead.value) || 0);
+        setCurrentPaymentStatus(
+            lead.payment_status || lead.paymentStatus || "Pending"
+        );
+        setActivities(lead.activities || []);
+    }, [lead]);
 
     // Won popup dialog state
     const [isWonDialogOpen, setIsWonDialogOpen] = React.useState(false);
@@ -528,8 +539,14 @@ export default function SingleLeadPage({
                         <DropdownMenu>
                             <DropdownMenuTrigger
                                 render={
-                                    <Button variant="outline" size="sm">
-                                        Status: {currentStatus}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="cursor-pointer gap-1.5"
+                                    >
+                                        <ArrowUpDownIcon className="size-3.5 text-muted-foreground" />
+                                        <span>Change Status</span>
+                                        <ChevronDownIcon className="size-3 text-muted-foreground" />
                                     </Button>
                                 }
                             />
@@ -547,7 +564,7 @@ export default function SingleLeadPage({
                                     <DropdownMenuItem
                                         key={st}
                                         onClick={() => handleStatusSelect(st)}
-                                        className="text-xs"
+                                        className="text-xs cursor-pointer"
                                     >
                                         <Badge
                                             variant="outline"
@@ -560,16 +577,30 @@ export default function SingleLeadPage({
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        <Button
-                            size="sm"
-                            className="bg-primary text-primary-foreground"
-                            onClick={() => {
-                                alert(`Calling patient at ${lead.phone}`);
+                        <BookAppointmentDialog
+                            initialData={{
+                                patientType: "existing",
+                                patientId: lead.id,
+                                patientName: lead.name,
+                                phone: lead.phone,
+                                email: lead.email,
+                                service: lead.service,
+                                doctor: lead.doctor,
+                                notes: `Consultation appointment for lead #${lead.id} (${lead.service}).`,
                             }}
-                        >
-                            <PhoneIcon className="size-3.5 mr-1.5" />
-                            Call Patient
-                        </Button>
+                            onSuccess={() => {
+                                router.reload();
+                            }}
+                            trigger={
+                                <Button
+                                    size="sm"
+                                    className="bg-primary text-primary-foreground cursor-pointer shadow-xs"
+                                >
+                                    <CalendarIcon className="size-3.5 mr-1.5" />
+                                    Book an Appointment
+                                </Button>
+                            }
+                        />
                     </div>
                 </div>
 
