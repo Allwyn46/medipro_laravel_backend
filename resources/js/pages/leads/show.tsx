@@ -578,6 +578,7 @@ export default function SingleLeadPage({
                         </DropdownMenu>
 
                         <BookAppointmentDialog
+                            lockPatient
                             initialData={{
                                 patientType: "existing",
                                 patientId: lead.id,

@@ -59,6 +59,7 @@ export interface BookAppointmentDialogProps {
     onOpenChange?: (open: boolean) => void;
     initialData?: BookAppointmentDialogInitialData;
     onSuccess?: () => void;
+    lockPatient?: boolean;
 }
 
 export const CLINIC_SERVICES = [
@@ -184,6 +185,7 @@ export function BookAppointmentDialog({
     onOpenChange: setControlledOpen,
     initialData,
     onSuccess,
+    lockPatient = false,
 }: BookAppointmentDialogProps) {
     const [internalOpen, setInternalOpen] = React.useState(false);
     const isControlled = controlledOpen !== undefined;
@@ -628,76 +630,78 @@ export function BookAppointmentDialog({
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
                     {/* Patient Type Selection: Existing Patient vs New Patient */}
-                    <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs font-semibold text-foreground">
-                            Patient Registration Status <span className="text-destructive">*</span>
-                        </Label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setPatientType("existing");
-                                    if (!selectedPatientId) {
-                                        setIsDropdownOpen(true);
-                                    }
-                                }}
-                                className={cn(
-                                    "flex items-center gap-2.5 rounded-lg border p-2.5 text-xs font-medium transition-all text-left cursor-pointer",
-                                    patientType === "existing"
-                                        ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
-                                        : "border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                                )}
-                            >
-                                <div
+                    {!lockPatient && (
+                        <div className="flex flex-col gap-1.5">
+                            <Label className="text-xs font-semibold text-foreground">
+                                Patient Registration Status <span className="text-destructive">*</span>
+                            </Label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPatientType("existing");
+                                        if (!selectedPatientId) {
+                                            setIsDropdownOpen(true);
+                                        }
+                                    }}
                                     className={cn(
-                                        "flex size-7 shrink-0 items-center justify-center rounded-md",
+                                        "flex items-center gap-2.5 rounded-lg border p-2.5 text-xs font-medium transition-all text-left cursor-pointer",
                                         patientType === "existing"
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted text-muted-foreground"
+                                            ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
+                                            : "border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                                     )}
                                 >
-                                    <UserCheckIcon className="size-4" />
-                                </div>
-                                <div>
-                                    <div className="font-semibold text-foreground text-xs">Existing Patient</div>
-                                    <div className="text-[10px] text-muted-foreground leading-tight">Search & select from records</div>
-                                </div>
-                            </button>
+                                    <div
+                                        className={cn(
+                                            "flex size-7 shrink-0 items-center justify-center rounded-md",
+                                            patientType === "existing"
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted text-muted-foreground"
+                                        )}
+                                    >
+                                        <UserCheckIcon className="size-4" />
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-foreground text-xs">Existing Patient</div>
+                                        <div className="text-[10px] text-muted-foreground leading-tight">Search & select from records</div>
+                                    </div>
+                                </button>
 
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setPatientType("new");
-                                    setSelectedPatientId(null);
-                                    setPatientName("");
-                                    setPhone("");
-                                    setEmail("");
-                                    setIsDropdownOpen(false);
-                                }}
-                                className={cn(
-                                    "flex items-center gap-2.5 rounded-lg border p-2.5 text-xs font-medium transition-all text-left cursor-pointer",
-                                    patientType === "new"
-                                        ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
-                                        : "border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                                )}
-                            >
-                                <div
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPatientType("new");
+                                        setSelectedPatientId(null);
+                                        setPatientName("");
+                                        setPhone("");
+                                        setEmail("");
+                                        setIsDropdownOpen(false);
+                                    }}
                                     className={cn(
-                                        "flex size-7 shrink-0 items-center justify-center rounded-md",
+                                        "flex items-center gap-2.5 rounded-lg border p-2.5 text-xs font-medium transition-all text-left cursor-pointer",
                                         patientType === "new"
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted text-muted-foreground"
+                                            ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
+                                            : "border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                                     )}
                                 >
-                                    <UserPlusIcon className="size-4" />
-                                </div>
-                                <div>
-                                    <div className="font-semibold text-foreground text-xs">New Patient</div>
-                                    <div className="text-[10px] text-muted-foreground leading-tight">Register new patient details</div>
-                                </div>
-                            </button>
+                                    <div
+                                        className={cn(
+                                            "flex size-7 shrink-0 items-center justify-center rounded-md",
+                                            patientType === "new"
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted text-muted-foreground"
+                                        )}
+                                    >
+                                        <UserPlusIcon className="size-4" />
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-foreground text-xs">New Patient</div>
+                                        <div className="text-[10px] text-muted-foreground leading-tight">Register new patient details</div>
+                                    </div>
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Existing Patient Search Section */}
                     {patientType === "existing" && (
@@ -707,9 +711,9 @@ export function BookAppointmentDialog({
                         >
                             <div className="flex items-center justify-between">
                                 <Label className="text-xs font-medium text-foreground">
-                                    Search Existing Patient <span className="text-destructive">*</span>
+                                    {lockPatient ? "Patient Information" : "Search Existing Patient"} {!lockPatient && <span className="text-destructive">*</span>}
                                 </Label>
-                                {selectedPatient && (
+                                {!lockPatient && selectedPatient && (
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -746,7 +750,7 @@ export function BookAppointmentDialog({
                                                     variant="outline"
                                                     className="text-[10px] py-0 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
                                                 >
-                                                    Existing Patient Record
+                                                    {lockPatient ? "Lead Patient" : "Existing Patient Record"}
                                                 </Badge>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
@@ -761,18 +765,20 @@ export function BookAppointmentDialog({
                                             </div>
                                         </div>
                                     </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            setSelectedPatientId(null);
-                                            setIsDropdownOpen(true);
-                                        }}
-                                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                                    >
-                                        Change
-                                    </Button>
+                                    {!lockPatient && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSelectedPatientId(null);
+                                                setIsDropdownOpen(true);
+                                            }}
+                                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                                        >
+                                            Change
+                                        </Button>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="relative">
