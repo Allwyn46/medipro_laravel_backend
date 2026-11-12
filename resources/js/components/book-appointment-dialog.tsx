@@ -569,7 +569,7 @@ export function BookAppointmentDialog({
             }
 
             toast.success("Appointment Scheduled Successfully!", {
-                description: `${patientName.trim()} scheduled with ${doctor} for ${dateFormatted} at ${timeSlot}. Confirmation reminders sent.`,
+                description: `${patientName.trim()} scheduled with ${doctor} for ${dateFormatted} at ${timeSlot}. Confirmation reminder emails sent to patient and doctor.`,
             });
 
             if (typeof window !== "undefined") {
@@ -622,7 +622,7 @@ export function BookAppointmentDialog({
                                 Schedule Patient Appointment
                             </DialogTitle>
                             <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                                Schedule a patient consultation directly from the clinic dashboard.
+                                Schedule a patient consultation with email confirmation sent to both patient and doctor.
                             </DialogDescription>
                         </div>
                     </div>
@@ -1160,7 +1160,7 @@ export function BookAppointmentDialog({
                             ) : (
                                 <>
                                     <CheckCircle2Icon className="size-3.5 mr-1.5" />
-                                    Schedule Appointment
+                                    Confirm & Schedule Appointment
                                 </>
                             )}
                         </Button>

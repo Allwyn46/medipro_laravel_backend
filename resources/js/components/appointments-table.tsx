@@ -96,6 +96,7 @@ function getStatusBadgeClass(status: AppointmentStatus) {
         case "Cancelled":
             return "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800";
         case "Pending":
+        case "Awaiting Confirmation":
             return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
     }
 }
@@ -272,7 +273,7 @@ const columns = columnHelper.columns([
                     {status === "Confirmed" && (
                         <CheckCircle2Icon className="size-3 mr-1 text-emerald-500" />
                     )}
-                    {status === "Pending" && (
+                    {(status === "Pending" || status === "Awaiting Confirmation") && (
                         <span className="size-1.5 rounded-full bg-amber-500 animate-pulse mr-1" />
                     )}
                     {status}

@@ -183,6 +183,10 @@ class DashboardController extends Controller
 
         $pendingAppointments = (clone $appointmentsQuery)
             ->where('status', 'Pending')
+            ->where(function ($q) {
+                $q->whereNull('source')
+                    ->orWhereNotIn('source', ['Staff Booking', 'Staff Scheduling']);
+            })
             ->orderByDesc('id')
             ->get();
 

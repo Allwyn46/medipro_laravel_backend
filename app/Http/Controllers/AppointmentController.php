@@ -10,6 +10,9 @@ use Database\Seeders\AppointmentSeeder;
 use Database\Seeders\LeadSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class AppointmentController extends Controller
 {
@@ -138,8 +141,11 @@ class AppointmentController extends Controller
             );
         }
 
-        $patientToken = \Illuminate\Support\Str::random(40);
-        $doctorToken = \Illuminate\Support\Str::random(40);
+        $patientToken = Str::random(40);
+        $doctorToken = Str::random(40);
+
+        $isStaffScheduling = in_array($validated['source'] ?? '', ['Staff Booking', 'Staff Scheduling']);
+        $initialStatus = $isStaffScheduling ? 'Awaiting Confirmation' : 'Pending';
 
         $appointment = Appointment::create([
             'patient_name' => $validated['patientName'],
@@ -150,7 +156,7 @@ class AppointmentController extends Controller
             'doctor_id' => $doctorId,
             'date' => $validated['date'],
             'time' => $validated['time'],
-            'status' => 'Pending',
+            'status' => $initialStatus,
             'type' => $validated['type'] ?? 'Initial Consultation',
             'room' => $validated['room'] ?? 'Consultation Suite 1',
             'duration' => $validated['duration'] ?? '45 mins',
@@ -167,18 +173,25 @@ class AppointmentController extends Controller
             $appointment->sendConfirmationReminders();
         }
 
+        $activityTitle = $isStaffScheduling ? 'Appointment Scheduled' : 'Appointment Booked';
+        $activityDescription = $isStaffScheduling
+            ? "Scheduled consultation for {$validated['date']} at {$validated['time']} with {$validated['doctor']}. Confirmation reminder sent via email."
+            : "Scheduled consultation for {$validated['date']} at {$validated['time']} with {$validated['doctor']}.";
+
         LeadActivity::create([
             'lead_id' => $lead->id,
             'type' => 'Consultation',
-            'title' => 'Appointment Scheduled',
-            'description' => "Scheduled consultation for {$validated['date']} at {$validated['time']} with {$validated['doctor']}. Confirmation reminder sent via email.",
+            'title' => $activityTitle,
+            'description' => $activityDescription,
             'doctor' => $validated['doctor'],
             'date' => now()->format('Y-m-d H:i'),
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Appointment scheduled successfully. Confirmation reminders have been sent.',
+            'message' => $isStaffScheduling
+                ? 'Appointment scheduled successfully. Confirmation reminders have been sent to both patient and doctor.'
+                : 'Appointment booked successfully. Awaiting clinic confirmation.',
             'appointment' => $appointment->fresh(),
         ], 201);
     }
@@ -186,7 +199,7 @@ class AppointmentController extends Controller
     /**
      * Confirm an appointment via email button link (Patient or Doctor).
      */
-    public function confirmViaEmail(Request $request, string $token): \Inertia\Response
+    public function confirmViaEmail(Request $request, string $token): Response
     {
         $appointment = Appointment::where('patient_token', $token)
             ->orWhere('doctor_token', $token)
@@ -250,7 +263,7 @@ class AppointmentController extends Controller
             }
         }
 
-        return \Inertia\Inertia::render('appointments/confirmed', [
+        return Inertia::render('appointments/confirmed', [
             'appointment' => $fresh,
             'role' => $role,
             'bothConfirmed' => $bothConfirmed,

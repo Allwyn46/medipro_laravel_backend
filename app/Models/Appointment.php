@@ -2,10 +2,16 @@
 
 namespace App\Models;
 
+use App\Mail\AppointmentDoctorReminderMail;
+use App\Mail\AppointmentPatientReminderMail;
+use Carbon\Carbon;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class Appointment extends Model
 {
@@ -45,8 +51,6 @@ class Appointment extends Model
     protected function casts(): array
     {
         return [
-            'patient_confirmed_at' => 'datetime',
-            'doctor_confirmed_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
         ];
     }
@@ -106,17 +110,21 @@ class Appointment extends Model
 
     public function getPatientConfirmedAtAttribute(): ?string
     {
-        return $this->patient_confirmed_at?->toISOString();
+        $val = $this->attributes['patient_confirmed_at'] ?? null;
+
+        return $val ? Carbon::parse($val)->toISOString() : null;
     }
 
     public function getDoctorConfirmedAtAttribute(): ?string
     {
-        return $this->doctor_confirmed_at?->toISOString();
+        $val = $this->attributes['doctor_confirmed_at'] ?? null;
+
+        return $val ? Carbon::parse($val)->toISOString() : null;
     }
 
     public function getIsFullyConfirmedAttribute(): bool
     {
-        return $this->patient_confirmed_at !== null && $this->doctor_confirmed_at !== null;
+        return ! empty($this->attributes['patient_confirmed_at']) && ! empty($this->attributes['doctor_confirmed_at']);
     }
 
     public function getConfirmationStatusAttribute(): string
@@ -124,17 +132,17 @@ class Appointment extends Model
         if ($this->is_fully_confirmed || $this->status === 'Confirmed') {
             return 'Confirmed';
         }
-        if ($this->patient_confirmed_at && ! $this->doctor_confirmed_at) {
+        if (! empty($this->attributes['patient_confirmed_at']) && empty($this->attributes['doctor_confirmed_at'])) {
             return 'Awaiting Doctor';
         }
-        if (! $this->patient_confirmed_at && $this->doctor_confirmed_at) {
+        if (empty($this->attributes['patient_confirmed_at']) && ! empty($this->attributes['doctor_confirmed_at'])) {
             return 'Awaiting Patient';
         }
 
         return 'Awaiting Confirmations';
     }
 
-    public function getScheduledDate(): \Carbon\Carbon
+    public function getScheduledDate(): Carbon
     {
         $val = trim((string) ($this->attributes['date'] ?? ''));
         if (strtolower($val) === 'today') {
@@ -145,7 +153,7 @@ class Appointment extends Model
         }
 
         try {
-            return \Carbon\Carbon::parse($val)->startOfDay();
+            return Carbon::parse($val)->startOfDay();
         } catch (\Throwable) {
             return now()->startOfDay();
         }
@@ -178,11 +186,11 @@ class Appointment extends Model
         // Ensure secure unique tokens exist
         $dirty = false;
         if (! $this->patient_token) {
-            $this->patient_token = \Illuminate\Support\Str::random(40);
+            $this->patient_token = Str::random(40);
             $dirty = true;
         }
         if (! $this->doctor_token) {
-            $this->doctor_token = \Illuminate\Support\Str::random(40);
+            $this->doctor_token = Str::random(40);
             $dirty = true;
         }
 
@@ -200,20 +208,20 @@ class Appointment extends Model
 
         try {
             if ($this->patient_email) {
-                \Illuminate\Support\Facades\Mail::to($this->patient_email)
-                    ->send(new \App\Mail\AppointmentPatientReminderMail($this, $patientConfirmUrl));
+                Mail::to($this->patient_email)
+                    ->send(new AppointmentPatientReminderMail($this, $patientConfirmUrl));
             }
 
             if ($doctorEmail) {
-                \Illuminate\Support\Facades\Mail::to($doctorEmail)
-                    ->send(new \App\Mail\AppointmentDoctorReminderMail($this, $doctorConfirmUrl));
+                Mail::to($doctorEmail)
+                    ->send(new AppointmentDoctorReminderMail($this, $doctorConfirmUrl));
             }
 
             $this->update(['reminder_sent_at' => now()]);
 
             return true;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to send appointment reminder emails: '.$e->getMessage());
+            Log::error('Failed to send appointment reminder emails: '.$e->getMessage());
 
             return false;
         }
