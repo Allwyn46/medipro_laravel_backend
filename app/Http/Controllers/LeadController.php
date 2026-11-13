@@ -70,7 +70,7 @@ class LeadController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'service' => ['required', 'string', 'max:255'],
             'doctor' => ['required', 'string', 'max:255'],
-            'status' => ['required', 'string', 'in:New,Contacted,Consultation Scheduled,Treatment Plan Sent,Won,Lost'],
+            'status' => ['required', 'string', 'in:New patients,New Patients,Contacted patients,Contacted Patients,Consultation Scheduled,Follow up patients,Follow-up Patients,Confirmed patients,Confirmed Patients,Reschedule,New,Contacted,Treatment Plan Sent,Won,Lost'],
             'priority' => ['required', 'string', 'in:High,Medium,Low'],
             'value' => ['nullable', 'numeric', 'min:0'],
             'source' => ['nullable', 'string', 'max:100'],
@@ -113,7 +113,7 @@ class LeadController extends Controller
             'service' => $validated['service'],
             'doctor' => $validated['doctor'],
             'doctor_id' => $doctorId,
-            'status' => $validated['status'] ?? 'New',
+            'status' => $validated['status'] ?? 'New patients',
             'priority' => $validated['priority'] ?? 'Medium',
             'value' => isset($validated['value']) ? (float) $validated['value'] : 1500.00,
             'source' => $validated['source'] ?? 'Manual Entry',
@@ -168,7 +168,7 @@ class LeadController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:New,Contacted,Consultation Scheduled,Treatment Plan Sent,Won,Lost'],
+            'status' => ['required', 'string', 'in:New patients,New Patients,Contacted patients,Contacted Patients,Consultation Scheduled,Follow up patients,Follow-up Patients,Confirmed patients,Confirmed Patients,Reschedule,New,Contacted,Treatment Plan Sent,Won,Lost'],
             'value' => ['nullable', 'numeric', 'min:0'],
             'payment_status' => ['nullable', 'string', 'in:Pending,Partially Paid,Paid'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -193,12 +193,14 @@ class LeadController extends Controller
         $lead->update($updateData);
 
         // Record an activity in lead_activities
-        $isWon = ($newStatus === 'Won');
+        $isWon = in_array($newStatus, ['Won', 'Confirmed patients', 'Confirmed Patients']);
         $activityType = $isWon ? 'Consultation' : 'Status Change';
-        $activityTitle = $isWon ? 'Consultation Completed - Won' : "Status Changed to {$newStatus}";
+        $activityTitle = $isWon
+            ? ($newStatus === 'Won' ? 'Consultation Completed - Won' : "Consultation Completed - {$newStatus}")
+            : "Status Changed to {$newStatus}";
 
         $activityDesc = $isWon
-            ? 'Consultation marked as Won with Total Value of ₹'.number_format($lead->value, 2)." (Payment: {$lead->payment_status}).".(! empty($validated['notes']) ? " Note: {$validated['notes']}" : '')
+            ? "Consultation marked as {$newStatus} with Total Value of ₹".number_format($lead->value, 2)." (Payment: {$lead->payment_status}).".(! empty($validated['notes']) ? " Note: {$validated['notes']}" : '')
             : "Lead status updated from {$oldStatus} to {$newStatus} in clinic CRM.".(! empty($validated['notes']) ? " Note: {$validated['notes']}" : '');
 
         $activity = LeadActivity::create([
@@ -212,7 +214,7 @@ class LeadController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $isWon ? 'Consultation completed and marked as Won.' : 'Lead status updated successfully.',
+            'message' => $isWon ? "Consultation completed and marked as {$newStatus}." : 'Lead status updated successfully.',
             'lead' => $lead->fresh(['activities']),
             'activity' => $activity,
         ]);

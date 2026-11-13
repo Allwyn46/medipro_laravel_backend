@@ -42,6 +42,55 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Appointment } from "@/types/appointment";
+import type { DoctorProfile } from "@/types/auth";
+
+const DEFAULT_DOCTORS: DoctorProfile[] = [
+    {
+        id: 1,
+        name: "Dr. Eddie Lake",
+        specialty: "Dental Implants & Cosmetic",
+        consultation_fee: 1500,
+        room: "Room 101",
+        email: "eddie.lake@medipro.com",
+        is_active: true,
+    },
+    {
+        id: 2,
+        name: "Dr. Jamik Tashpulatov",
+        specialty: "Orthodontics & Clear Aligners",
+        consultation_fee: 2000,
+        room: "Room 102",
+        email: "jamik.tashpulatov@medipro.com",
+        is_active: true,
+    },
+    {
+        id: 3,
+        name: "Dr. Emily Whalen",
+        specialty: "Cardiology Checkup & ECG",
+        consultation_fee: 1800,
+        room: "Room 201",
+        email: "emily.whalen@medipro.com",
+        is_active: true,
+    },
+    {
+        id: 4,
+        name: "Dr. Sarah Jenkins",
+        specialty: "General & Preventative Care",
+        consultation_fee: 1200,
+        room: "Room 103",
+        email: "sarah.jenkins@medipro.com",
+        is_active: true,
+    },
+];
+
+function getDoctorInitials(name: string): string {
+    const clean = name.replace(/^Dr\.?\s+/i, "").trim();
+    const parts = clean.split(/\s+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return clean.slice(0, 2).toUpperCase();
+}
 
 const ALL_TIME_SLOTS = [
     { time: "09:00 AM", period: "Morning" },
@@ -197,10 +246,46 @@ const SERVICES = [
 
 export default function Welcome({
     bookedSlots = [],
+    doctors = [],
 }: {
     bookedSlots?: Appointment[];
+    doctors?: DoctorProfile[];
 }) {
-    const { auth } = usePage<{ auth?: { user?: { name: string } } }>().props;
+    const { auth, clinicDoctors } = usePage<{
+        auth?: { user?: { name: string } };
+        clinicDoctors?: DoctorProfile[];
+    }>().props;
+
+    const doctorList: DoctorProfile[] = React.useMemo(() => {
+        if (doctors && doctors.length > 0) {
+            return doctors;
+        }
+        if (clinicDoctors && clinicDoctors.length > 0) {
+            return clinicDoctors;
+        }
+        return DEFAULT_DOCTORS;
+    }, [doctors, clinicDoctors]);
+
+    const dynamicServices = React.useMemo(() => {
+        const base = [...SERVICES];
+        doctorList.forEach((doc) => {
+            if (
+                doc.specialty &&
+                !base.some(
+                    (s) => s.title.toLowerCase() === doc.specialty.toLowerCase(),
+                )
+            ) {
+                base.push({
+                    title: doc.specialty,
+                    doctor: doc.name,
+                    icon: StethoscopeIcon,
+                    description: `Specialized medical consultation and care with ${doc.name}.`,
+                    badge: doc.specialty.split("&")[0].trim(),
+                });
+            }
+        });
+        return base;
+    }, [doctorList]);
 
     const [formSubmitted, setFormSubmitted] = React.useState(false);
 
@@ -324,7 +409,7 @@ export default function Welcome({
 
     const [bookingData, setBookingData] = React.useState(() => {
         const todayStr = getLocalDateString(0);
-        const defaultDoctor = "Dr. Eddie Lake";
+        const defaultDoctor = doctorList[0]?.name || "Dr. Eddie Lake";
         const initialSlot =
             ALL_TIME_SLOTS.find((s) => {
                 const past = isSlotPast(s.time, todayStr);
@@ -343,7 +428,7 @@ export default function Welcome({
             patientName: "",
             email: "",
             phone: "",
-            service: "Dental Implants & Cosmetic",
+            service: doctorList[0]?.specialty || "Dental Implants & Cosmetic",
             doctor: defaultDoctor,
             date: todayStr,
             timeSlot: initialSlot,
@@ -716,8 +801,11 @@ export default function Welcome({
                                                             email: "",
                                                             phone: "",
                                                             service:
+                                                                doctorList[0]?.specialty ||
                                                                 "Dental Implants & Cosmetic",
-                                                            doctor: "Dr. Eddie Lake",
+                                                            doctor:
+                                                                doctorList[0]?.name ||
+                                                                "Dr. Eddie Lake",
                                                             date: getLocalDateString(
                                                                 0,
                                                             ),
@@ -843,20 +931,30 @@ export default function Welcome({
                                                         ) => {
                                                             if (val) {
                                                                 const s =
-                                                                    SERVICES.find(
+                                                                    dynamicServices.find(
                                                                         (
                                                                             item,
                                                                         ) =>
                                                                             item.title ===
                                                                             val,
                                                                     );
+                                                                const matchedDoc =
+                                                                    doctorList.find(
+                                                                        (
+                                                                            d,
+                                                                        ) =>
+                                                                            d.specialty?.toLowerCase() ===
+                                                                            val.toLowerCase(),
+                                                                    );
                                                                 setBookingData({
                                                                     ...bookingData,
                                                                     service:
                                                                         val,
-                                                                    doctor: s
-                                                                        ? s.doctor
-                                                                        : bookingData.doctor,
+                                                                    doctor: matchedDoc
+                                                                        ? matchedDoc.name
+                                                                        : s
+                                                                          ? s.doctor
+                                                                          : bookingData.doctor,
                                                                 });
                                                             }
                                                         }}
@@ -866,7 +964,7 @@ export default function Welcome({
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectGroup>
-                                                                {SERVICES.map(
+                                                                {dynamicServices.map(
                                                                     (s) => (
                                                                         <SelectItem
                                                                             key={
@@ -898,11 +996,23 @@ export default function Welcome({
                                                         onValueChange={(
                                                             val,
                                                         ) => {
-                                                            if (val)
+                                                            if (val) {
+                                                                const matchedDoc =
+                                                                    doctorList.find(
+                                                                        (
+                                                                            d,
+                                                                        ) =>
+                                                                            d.name ===
+                                                                            val,
+                                                                    );
                                                                 setBookingData({
                                                                     ...bookingData,
                                                                     doctor: val,
+                                                                    service:
+                                                                        matchedDoc?.specialty ||
+                                                                        bookingData.service,
                                                                 });
+                                                            }
                                                         }}
                                                     >
                                                         <SelectTrigger className="w-full text-xs h-9">
@@ -910,28 +1020,26 @@ export default function Welcome({
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectGroup>
-                                                                <SelectItem value="Dr. Eddie Lake">
-                                                                    Dr. Eddie
-                                                                    Lake (Dental
-                                                                    & Derma)
-                                                                </SelectItem>
-                                                                <SelectItem value="Dr. Jamik Tashpulatov">
-                                                                    Dr. Jamik
-                                                                    Tashpulatov
-                                                                    (Ortho &
-                                                                    Surgery)
-                                                                </SelectItem>
-                                                                <SelectItem value="Dr. Emily Whalen">
-                                                                    Dr. Emily
-                                                                    Whalen
-                                                                    (Cardio &
-                                                                    Joints)
-                                                                </SelectItem>
-                                                                <SelectItem value="Dr. Sarah Jenkins">
-                                                                    Dr. Sarah
-                                                                    Jenkins
-                                                                    (Pediatrics)
-                                                                </SelectItem>
+                                                                {doctorList.map(
+                                                                    (doc) => (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                doc.id ||
+                                                                                doc.name
+                                                                            }
+                                                                            value={
+                                                                                doc.name
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                doc.name
+                                                                            }{" "}
+                                                                            {doc.specialty
+                                                                                ? `(${doc.specialty})`
+                                                                                : ""}
+                                                                        </SelectItem>
+                                                                    ),
+                                                                )}
                                                             </SelectGroup>
                                                         </SelectContent>
                                                     </Select>
@@ -1080,9 +1188,8 @@ export default function Welcome({
                                                         <span className="text-xs font-semibold text-foreground">
                                                             Available Slots for{" "}
                                                             {
-                                                                bookingData.doctor.split(
-                                                                    " ",
-                                                                )[1]
+                                                                bookingData.doctor.replace(/^Dr\.?\s+/i, "") ||
+                                                                bookingData.doctor
                                                             }
                                                         </span>
                                                     </div>
@@ -1377,65 +1484,50 @@ export default function Welcome({
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {[
-                                {
-                                    name: "Dr. Eddie Lake",
-                                    role: "Head of Dentistry & Aesthetics",
-                                    experience: "14+ Years Experience",
-                                    initials: "EL",
-                                },
-                                {
-                                    name: "Dr. Jamik Tashpulatov",
-                                    role: "Senior Orthopedic Surgeon",
-                                    experience: "18+ Years Experience",
-                                    initials: "JT",
-                                },
-                                {
-                                    name: "Dr. Emily Whalen",
-                                    role: "Director of Cardiovascular Health",
-                                    experience: "16+ Years Experience",
-                                    initials: "EW",
-                                },
-                                {
-                                    name: "Dr. Sarah Jenkins",
-                                    role: "Pediatric & Family Medicine",
-                                    experience: "12+ Years Experience",
-                                    initials: "SJ",
-                                },
-                            ].map((doc) => (
-                                <div
-                                    key={doc.name}
-                                    className="flex flex-col items-center text-center p-6 rounded-xl border bg-card shadow-xs"
-                                >
-                                    <div className="size-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold mb-4">
-                                        {doc.initials}
-                                    </div>
-                                    <h3 className="font-semibold text-base text-foreground">
-                                        {doc.name}
-                                    </h3>
-                                    <p className="text-xs text-primary font-medium mt-1">
-                                        {doc.role}
-                                    </p>
-                                    <span className="text-[11px] text-muted-foreground mt-2">
-                                        {doc.experience}
-                                    </span>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-4 text-xs w-full"
-                                        render={<a href="#booking" />}
-                                        onClick={() => {
-                                            setBookingData((prev) => ({
-                                                ...prev,
-                                                doctor: doc.name,
-                                            }));
-                                        }}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {doctorList.map((doc) => {
+                                const initials = getDoctorInitials(doc.name);
+                                const displayName = doc.name;
+                                const cleanName = displayName.replace(/^Dr\.?\s+/i, "");
+                                const firstName = cleanName.split(" ")[0] || displayName;
+
+                                return (
+                                    <div
+                                        key={doc.id || doc.name}
+                                        className="flex flex-col items-center text-center p-6 rounded-xl border bg-card shadow-xs hover:border-primary/40 transition-colors"
                                     >
-                                        Book with {doc.name.split(" ")[1]}
-                                    </Button>
-                                </div>
-                            ))}
+                                        <div className="size-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold mb-4">
+                                            {initials}
+                                        </div>
+                                        <h3 className="font-semibold text-base text-foreground">
+                                            {displayName}
+                                        </h3>
+                                        <p className="text-xs text-primary font-medium mt-1">
+                                            {doc.specialty || "Clinic Specialist"}
+                                        </p>
+                                        <span className="text-[11px] text-muted-foreground mt-2">
+                                            {doc.room
+                                                ? `Consulting in ${doc.room}`
+                                                : "Board Certified Specialist"}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="mt-4 text-xs w-full cursor-pointer"
+                                            render={<a href="#booking" />}
+                                            onClick={() => {
+                                                setBookingData((prev) => ({
+                                                    ...prev,
+                                                    doctor: doc.name,
+                                                    service: doc.specialty || prev.service,
+                                                }));
+                                            }}
+                                        >
+                                            Book with {firstName}
+                                        </Button>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </section>

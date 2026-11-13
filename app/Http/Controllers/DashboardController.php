@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Lead;
+use App\Services\AppointmentExpirationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,6 +17,9 @@ class DashboardController extends Controller
      */
     public function index(Request $request): Response
     {
+        // Expire any past-due unconfirmed appointments on-demand for immediate schedule freshness
+        app(AppointmentExpirationService::class)->expirePastDueAppointments(15);
+
         $user = auth()->user();
         $isDoctor = $user && $user->isDoctor();
         $isAdmin = $user && $user->isAdmin();
@@ -46,6 +50,9 @@ class DashboardController extends Controller
         }
 
         // Calculate doctor-wise revenue breakdown
+        $wonStatuses = ['Won', 'Confirmed patients', 'Confirmed Patients'];
+        $closedStatuses = ['Won', 'Lost', 'Confirmed patients', 'Confirmed Patients', 'Reschedule'];
+
         $allActiveDoctors = Doctor::active()->get();
         $doctorRevenues = [];
         $totalClinicRev = 0;
@@ -56,7 +63,7 @@ class DashboardController extends Controller
                     ->orWhere('doctor', $doc->name);
             });
 
-            $docWon = (float) (clone $docLeadsQuery)->where('status', 'Won')->sum('value');
+            $docWon = (float) (clone $docLeadsQuery)->whereIn('status', $wonStatuses)->sum('value');
             $docAll = (float) (clone $docLeadsQuery)->sum('value');
             $docRevenue = $docWon > 0 ? $docWon : $docAll;
             $totalClinicRev += $docRevenue;
@@ -94,13 +101,13 @@ class DashboardController extends Controller
                 $q->whereNull('doctor')->orWhereNotIn('doctor', $docNames);
             });
 
-            $unassignedWon = (float) (clone $unassignedLeadsQuery)->where('status', 'Won')->sum('value');
+            $unassignedWon = (float) (clone $unassignedLeadsQuery)->whereIn('status', $wonStatuses)->sum('value');
             $unassignedAll = (float) (clone $unassignedLeadsQuery)->sum('value');
             $unassignedRevenue = $unassignedWon > 0 ? $unassignedWon : $unassignedAll;
             $totalClinicRev += $unassignedRevenue;
         } else {
             // Fallback when no doctors are registered in the clinic
-            $wonRevenue = (float) (clone $leadsQuery)->where('status', 'Won')->sum('value');
+            $wonRevenue = (float) (clone $leadsQuery)->whereIn('status', $wonStatuses)->sum('value');
             $allValue = (float) (clone $leadsQuery)->sum('value');
             $totalClinicRev = $wonRevenue > 0 ? $wonRevenue : $allValue;
         }
@@ -115,7 +122,7 @@ class DashboardController extends Controller
         }
 
         if ($selectedDoctorId) {
-            $wonRevenue = (float) (clone $leadsQuery)->where('status', 'Won')->sum('value');
+            $wonRevenue = (float) (clone $leadsQuery)->whereIn('status', $wonStatuses)->sum('value');
             $allValue = (float) (clone $leadsQuery)->sum('value');
             $revenue = $wonRevenue > 0 ? $wonRevenue : $allValue;
         } else {
@@ -124,7 +131,7 @@ class DashboardController extends Controller
 
         $newAppointmentsCount = (clone $appointmentsQuery)->where('status', '!=', 'Cancelled')->count();
         $todayAppointmentsCount = (clone $appointmentsQuery)->where('date', 'Today')->where('status', '!=', 'Cancelled')->count();
-        $activeLeadsCount = (clone $leadsQuery)->whereNotIn('status', ['Won', 'Lost'])->count();
+        $activeLeadsCount = (clone $leadsQuery)->whereNotIn('status', $closedStatuses)->count();
         $awaitingConsultationCount = (clone $leadsQuery)->where('status', 'Consultation Scheduled')->count();
 
         if ($isDoctor) {

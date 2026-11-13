@@ -22,7 +22,7 @@ class LoginController extends Controller
     {
         // Validation failures automatically return 422 JSON for Axios requests
         $validated = $request->validate([
-            'email'    => ['required', 'email'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
@@ -32,11 +32,11 @@ class LoginController extends Controller
             if (! $user || ! Hash::check($validated['password'], $user->password)) {
                 Log::warning('Login failed: invalid credentials', [
                     'email' => $validated['email'],
-                    'ip'    => $request->ip(),
+                    'ip' => $request->ip(),
                 ]);
 
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Invalid credentials',
                 ], 401);
             }
@@ -45,15 +45,15 @@ class LoginController extends Controller
             $request->session()->regenerate();
 
             return response()->json([
-                'status'   => 'success',
-                'message'  => 'User logged in successfully',
+                'status' => 'success',
+                'message' => 'User logged in successfully',
                 'redirect' => route('dashboard'),
             ]);
         } catch (\Throwable $e) {
-            Log::error('Login error: ' . $e->getMessage());
+            Log::error('Login error: '.$e->getMessage());
 
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Something went wrong. Please try again.',
             ], 500);
         }
@@ -67,15 +67,15 @@ class LoginController extends Controller
             $request->session()->regenerateToken();
 
             return response()->json([
-                'status'   => 'success',
-                'message'  => 'Logged out successfully',
+                'status' => 'success',
+                'message' => 'Logged out successfully',
                 'redirect' => route('login'),
             ]);
         } catch (\Throwable $e) {
-            Log::error('Logout error: ' . $e->getMessage());
+            Log::error('Logout error: '.$e->getMessage());
 
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'An error occurred while logging out.',
             ], 500);
         }

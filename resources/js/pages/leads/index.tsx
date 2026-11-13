@@ -87,19 +87,29 @@ const features = tableFeatures({
 
 const columnHelper = createColumnHelper<typeof features, Lead>();
 
-function getStatusBadgeClass(status: LeadStatus) {
+function getStatusBadgeClass(status: LeadStatus | string) {
     switch (status) {
         case "New":
+        case "New patients":
+        case "New Patients":
             return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
         case "Contacted":
+        case "Contacted patients":
+        case "Contacted Patients":
             return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
         case "Consultation Scheduled":
+        case "Consultation Booked":
             return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800";
         case "Treatment Plan Sent":
+        case "Follow up patients":
+        case "Follow-up Patients":
             return "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800";
         case "Won":
+        case "Confirmed patients":
+        case "Confirmed Patients":
             return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800";
         case "Lost":
+        case "Reschedule":
             return "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
         default:
             return "";
@@ -350,16 +360,41 @@ export default function LeadsPage({
     const totalLeads = data.length;
     const totalPipelineValue = data.reduce((acc, lead) => acc + lead.value, 0);
     const scheduledCount = data.filter(
-        (l) => l.status === "Consultation Scheduled",
+        (l) => l.status === "Consultation Scheduled" || l.status === "Consultation Booked",
     ).length;
-    const wonCount = data.filter((l) => l.status === "Won").length;
+    const wonCount = data.filter(
+        (l) =>
+            l.status === "Won" ||
+            l.status === "Confirmed patients" ||
+            l.status === "Confirmed Patients",
+    ).length;
 
     // Filter data based on search and status
     const filteredData = React.useMemo(() => {
         let result = data;
 
         if (statusFilter !== "ALL") {
-            result = result.filter((lead) => lead.status === statusFilter);
+            result = result.filter((lead) => {
+                if (statusFilter === "New patients" || statusFilter === "New Patients") {
+                    return lead.status === "New patients" || lead.status === "New Patients" || lead.status === "New";
+                }
+                if (statusFilter === "Contacted patients" || statusFilter === "Contacted Patients") {
+                    return lead.status === "Contacted patients" || lead.status === "Contacted Patients" || lead.status === "Contacted";
+                }
+                if (statusFilter === "Consultation Scheduled") {
+                    return lead.status === "Consultation Scheduled" || lead.status === "Consultation Booked";
+                }
+                if (statusFilter === "Follow up patients" || statusFilter === "Follow-up Patients") {
+                    return lead.status === "Follow up patients" || lead.status === "Follow-up Patients" || lead.status === "Treatment Plan Sent";
+                }
+                if (statusFilter === "Confirmed patients" || statusFilter === "Confirmed Patients") {
+                    return lead.status === "Confirmed patients" || lead.status === "Confirmed Patients" || lead.status === "Won";
+                }
+                if (statusFilter === "Reschedule") {
+                    return lead.status === "Reschedule" || lead.status === "Lost";
+                }
+                return lead.status === statusFilter;
+            });
         }
 
         if (searchQuery.trim() !== "") {
@@ -423,7 +458,7 @@ export default function LeadsPage({
                 footerSubtext: "Doctor consultations booked",
             },
             {
-                title: "Won Patients",
+                title: "Confirmed Patients",
                 value: `${wonCount}`,
                 badgeText: "+15.0%",
                 badgeTrend: "up",
@@ -511,19 +546,23 @@ export default function LeadsPage({
                                         <SelectItem value="ALL">
                                             All Statuses
                                         </SelectItem>
-                                        <SelectItem value="New">New</SelectItem>
-                                        <SelectItem value="Contacted">
-                                            Contacted
+                                        <SelectItem value="New patients">
+                                            New patients
+                                        </SelectItem>
+                                        <SelectItem value="Contacted patients">
+                                            Contacted patients
                                         </SelectItem>
                                         <SelectItem value="Consultation Scheduled">
                                             Consultation Scheduled
                                         </SelectItem>
-                                        <SelectItem value="Treatment Plan Sent">
-                                            Treatment Plan Sent
+                                        <SelectItem value="Follow up patients">
+                                            Follow up patients
                                         </SelectItem>
-                                        <SelectItem value="Won">Won</SelectItem>
-                                        <SelectItem value="Lost">
-                                            Lost
+                                        <SelectItem value="Confirmed patients">
+                                            Confirmed patients
+                                        </SelectItem>
+                                        <SelectItem value="Reschedule">
+                                            Reschedule
                                         </SelectItem>
                                     </SelectGroup>
                                 </SelectContent>

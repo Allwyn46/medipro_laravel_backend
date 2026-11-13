@@ -266,3 +266,28 @@ test('admin can filter dashboard by specific doctor id', function () {
     expect($metrics[0]['title'])->toContain("Dr. Jamik Tashpulatov's Revenue")
         ->and($metrics[0]['value'])->toBe('₹8,600.00');
 });
+
+test('newly registered doctor reflects in client portal', function () {
+    $admin = User::where('role', 'admin')->first();
+
+    // 1. Admin registers a new doctor
+    $this->actingAs($admin)->postJson(route('doctors.store'), [
+        'name' => 'Allwyn',
+        'email' => 'allwyn@medipro.com',
+        'specialty' => 'Cardiology',
+        'phone' => '1234567890',
+        'consultation_fee' => 1500,
+        'room' => 'Suite 1',
+        'password' => 'secret123',
+    ])->assertCreated();
+
+    // 2. Client visits portal
+    $response = $this->get(route('home'));
+    $response->assertOk();
+
+    $doctors = $response->viewData('page')['props']['doctors'];
+    $doctorNames = array_column(is_array($doctors) ? $doctors : $doctors->toArray(), 'name');
+
+    expect($doctorNames)->toContain('Allwyn')
+        ->and($doctorNames)->toContain('Dr. Eddie Lake');
+});

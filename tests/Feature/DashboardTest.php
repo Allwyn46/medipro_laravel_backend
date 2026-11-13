@@ -35,9 +35,9 @@ test('authenticated users can view dashboard with database metrics and appointme
 test('dashboard metrics match database totals', function () {
     $user = User::factory()->admin()->create();
 
-    $wonRevenue = Lead::where('status', 'Won')->sum('value');
+    $wonRevenue = Lead::whereIn('status', ['Won', 'Confirmed patients', 'Confirmed Patients'])->sum('value');
     $totalRevenue = $wonRevenue > 0 ? $wonRevenue : Lead::sum('value');
-    $activeLeadsCount = Lead::whereNotIn('status', ['Won', 'Lost'])->count();
+    $activeLeadsCount = Lead::whereNotIn('status', ['Won', 'Lost', 'Confirmed patients', 'Confirmed Patients', 'Reschedule'])->count();
 
     $response = $this->actingAs($user)->get(route('dashboard'));
 

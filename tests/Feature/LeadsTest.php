@@ -233,3 +233,50 @@ test('lead creation enforces dynamic custom field validation rules', function ()
     $response2->assertUnprocessable();
     $response2->assertJsonValidationErrors(['custom_fields.required_insurance']);
 });
+
+test('authenticated users can update lead status to Confirmed patients, Follow up patients, and Reschedule', function () {
+    $user = User::factory()->admin()->create();
+    $lead = Lead::first();
+
+    // Test Confirmed patients
+    $responseWon = $this->actingAs($user)->patchJson(route('leads.update-status', ['id' => $lead->id]), [
+        'status' => 'Confirmed patients',
+        'value' => 8200,
+        'payment_status' => 'Paid',
+        'notes' => 'Confirmed by patient in consultation.',
+    ]);
+    $responseWon->assertOk()->assertJson(['success' => true]);
+    expect($lead->fresh()->status)->toBe('Confirmed patients')
+        ->and((float) $lead->fresh()->value)->toBe(8200.0)
+        ->and($lead->fresh()->payment_status)->toBe('Paid');
+
+    // Test Follow up patients
+    $responseFollowUp = $this->actingAs($user)->patchJson(route('leads.update-status', ['id' => $lead->id]), [
+        'status' => 'Follow up patients',
+    ]);
+    $responseFollowUp->assertOk()->assertJson(['success' => true]);
+    expect($lead->fresh()->status)->toBe('Follow up patients');
+
+    // Test Reschedule
+    $responseReschedule = $this->actingAs($user)->patchJson(route('leads.update-status', ['id' => $lead->id]), [
+        'status' => 'Reschedule',
+    ]);
+    $responseReschedule->assertOk()->assertJson(['success' => true]);
+    expect($lead->fresh()->status)->toBe('Reschedule');
+});
+
+test('lead can be created with new patient statuses', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->postJson(route('leads.store'), [
+        'name' => 'Priya Patel',
+        'phone' => '+91 91234 56789',
+        'service' => 'General & Preventative Care',
+        'doctor' => 'Dr. Eddie Lake',
+        'status' => 'New patients',
+        'priority' => 'Medium',
+    ]);
+
+    $response->assertCreated();
+    expect(Lead::where('name', 'Priya Patel')->first()->status)->toBe('New patients');
+});

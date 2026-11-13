@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Mail\AppointmentDoctorReminderMail;
 use App\Mail\AppointmentPatientReminderMail;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -142,7 +143,7 @@ class Appointment extends Model
         return 'Awaiting Confirmations';
     }
 
-    public function getScheduledDate(): Carbon
+    public function getScheduledDate(): CarbonInterface
     {
         $val = trim((string) ($this->attributes['date'] ?? ''));
         if (strtolower($val) === 'today') {
@@ -157,6 +158,41 @@ class Appointment extends Model
         } catch (\Throwable) {
             return now()->startOfDay();
         }
+    }
+
+    /**
+     * Get the exact start date and time as a Carbon instance.
+     */
+    public function getScheduledStartDateTime(): CarbonInterface
+    {
+        $date = $this->getScheduledDate();
+        $timeStr = trim((string) ($this->attributes['time'] ?? ''));
+
+        if (! empty($timeStr)) {
+            try {
+                $parsedTime = Carbon::createFromFormat('h:i A', $timeStr);
+
+                return $date->copy()->setTime($parsedTime->hour, $parsedTime->minute, 0);
+            } catch (\Throwable) {
+                try {
+                    $parsedTime = Carbon::parse($timeStr);
+
+                    return $date->copy()->setTime($parsedTime->hour, $parsedTime->minute, 0);
+                } catch (\Throwable) {
+                    // Fallback to start of day
+                }
+            }
+        }
+
+        return $date;
+    }
+
+    /**
+     * Determine if the appointment has passed its clinical grace period past start time.
+     */
+    public function isPastGracePeriod(int $graceMinutes = 15): bool
+    {
+        return $this->getScheduledStartDateTime()->addMinutes($graceMinutes)->isPast();
     }
 
     /**

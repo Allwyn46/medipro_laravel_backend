@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Lead;
 use App\Models\LeadActivity;
+use App\Services\AppointmentExpirationService;
 use Database\Seeders\AppointmentSeeder;
 use Database\Seeders\LeadSeeder;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,50 @@ use Inertia\Response;
 
 class AppointmentController extends Controller
 {
+    /**
+     * Display the dedicated appointments registry.
+     */
+    public function registry(Request $request): Response
+    {
+        // Expire any past-due unconfirmed appointments on-demand
+        app(AppointmentExpirationService::class)->expirePastDueAppointments(15);
+
+        $user = $request->user();
+        $isDoctor = $user && $user->isDoctor();
+        $isAdmin = $user && $user->isAdmin();
+
+        // If doctor, strictly lock to their doctor profile; if admin, allow filtering by doctor_id query param
+        $selectedDoctorId = $isDoctor
+            ? $user->doctor?->id
+            : ($request->filled('doctor_id') ? (int) $request->query('doctor_id') : null);
+
+        $selectedDoctor = $selectedDoctorId ? Doctor::find($selectedDoctorId) : null;
+
+        $appointmentsQuery = Appointment::with(['doctorProfile'])->orderByDesc('id');
+
+        if ($selectedDoctorId) {
+            $appointmentsQuery->where(function ($q) use ($selectedDoctorId, $selectedDoctor) {
+                $q->where('doctor_id', $selectedDoctorId);
+                if ($selectedDoctor?->name) {
+                    $q->orWhere('doctor', $selectedDoctor->name);
+                }
+            });
+        }
+
+        $appointments = $appointmentsQuery->get();
+
+        $doctors = $isAdmin
+            ? Doctor::active()->orderBy('name')->get(['id', 'name', 'specialty', 'room', 'email', 'phone'])
+            : [];
+
+        return Inertia::render('appointments/index', [
+            'appointments' => $appointments,
+            'doctors' => $doctors,
+            'isAdmin' => $isAdmin,
+            'selectedDoctorId' => $selectedDoctorId,
+        ]);
+    }
+
     /**
      * Get a listing of all appointments.
      */
@@ -130,7 +175,7 @@ class AppointmentController extends Controller
                     'service' => $validated['service'],
                     'doctor' => $validated['doctor'],
                     'doctor_id' => $doctorId,
-                    'status' => 'New',
+                    'status' => 'New patients',
                     'priority' => 'High',
                     'value' => $leadValue,
                     'payment_status' => 'Pending',
@@ -204,6 +249,13 @@ class AppointmentController extends Controller
         $appointment = Appointment::where('patient_token', $token)
             ->orWhere('doctor_token', $token)
             ->firstOrFail();
+
+        if ($appointment->status === 'Reschedule') {
+            return Inertia::render('appointments/expired', [
+                'appointment' => $appointment,
+                'rebookUrl' => route('home').'#booking',
+            ]);
+        }
 
         $isPatient = $appointment->patient_token === $token;
         $role = $isPatient ? 'patient' : 'doctor';

@@ -5,7 +5,8 @@ export type AppointmentStatus =
     | 'Completed'
     | 'Cancelled'
     | 'Pending'
-    | 'Awaiting Confirmation';
+    | 'Awaiting Confirmation'
+    | 'Reschedule';
 
 export type AppointmentType =
     | 'Initial Consultation'

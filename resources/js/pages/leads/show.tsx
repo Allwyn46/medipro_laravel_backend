@@ -91,19 +91,29 @@ import type {
     PaymentStatus,
 } from "@/types/lead";
 
-function getStatusBadgeClass(status: LeadStatus) {
+function getStatusBadgeClass(status: LeadStatus | string) {
     switch (status) {
         case "New":
+        case "New patients":
+        case "New Patients":
             return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
         case "Contacted":
+        case "Contacted patients":
+        case "Contacted Patients":
             return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
         case "Consultation Scheduled":
+        case "Consultation Booked":
             return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800";
         case "Treatment Plan Sent":
+        case "Follow up patients":
+        case "Follow-up Patients":
             return "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800";
         case "Won":
+        case "Confirmed patients":
+        case "Confirmed Patients":
             return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800";
         case "Lost":
+        case "Reschedule":
             return "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
         default:
             return "";
@@ -330,7 +340,11 @@ export default function SingleLeadPage({
     };
 
     const handleStatusSelect = (status: LeadStatus) => {
-        if (status === "Won") {
+        if (
+            status === "Won" ||
+            status === "Confirmed patients" ||
+            status === "Confirmed Patients"
+        ) {
             setWonAmount(String(currentValue || 1500));
             setWonPaymentStatus("Paid");
             setWonNotes("");
@@ -392,7 +406,7 @@ export default function SingleLeadPage({
                     Accept: "application/json",
                 },
                 body: JSON.stringify({
-                    status: "Won",
+                    status: "Confirmed patients",
                     value: numericAmount,
                     payment_status: wonPaymentStatus,
                     notes: wonNotes.trim() || undefined,
@@ -401,23 +415,23 @@ export default function SingleLeadPage({
 
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                throw new Error(err.message || "Failed to mark as Won");
+                throw new Error(err.message || "Failed to mark as confirmed patient");
             }
 
             const data = await res.json();
-            setCurrentStatus("Won");
+            setCurrentStatus("Confirmed patients");
             setCurrentValue(numericAmount);
             setCurrentPaymentStatus(wonPaymentStatus);
             if (data.activity) {
                 setActivities((prev) => [data.activity, ...prev]);
             }
             setIsWonDialogOpen(false);
-            toast.success("Consultation Completed — Marked as Won!", {
+            toast.success("Consultation Completed — Confirmed Patient!", {
                 description: `Total Value updated to ₹${numericAmount.toLocaleString()} (${wonPaymentStatus}). Saved to database.`,
             });
         } catch (error: any) {
-            console.error("Error saving won consultation:", error);
-            toast.error("Failed to mark as Won", {
+            console.error("Error saving confirmed patient consultation:", error);
+            toast.error("Failed to confirm patient", {
                 description: error.message || "Please check your network and try again.",
             });
         } finally {
@@ -550,15 +564,15 @@ export default function SingleLeadPage({
                                     </Button>
                                 }
                             />
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="end" className="w-52">
                                 {(
                                     [
-                                        "New",
-                                        "Contacted",
+                                        "New patients",
+                                        "Contacted patients",
                                         "Consultation Scheduled",
-                                        "Treatment Plan Sent",
-                                        "Won",
-                                        "Lost",
+                                        "Follow up patients",
+                                        "Confirmed patients",
+                                        "Reschedule",
                                     ] as LeadStatus[]
                                 ).map((st) => (
                                     <DropdownMenuItem
@@ -833,7 +847,7 @@ export default function SingleLeadPage({
                             </div>
                             <div>
                                 <DialogTitle className="text-base sm:text-lg font-semibold tracking-tight">
-                                    Consultation Completed — Mark as Won
+                                    Consultation Completed — Confirmed Patient
                                 </DialogTitle>
                                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                                     Record the final treatment amount and patient payment status for this consultation.
@@ -948,7 +962,7 @@ export default function SingleLeadPage({
                                 ) : (
                                     <>
                                         <CheckCircle2Icon className="size-3.5 mr-1.5" />
-                                        Save & Mark as Won
+                                        Confirm Patient & Save
                                     </>
                                 )}
                             </Button>

@@ -30,6 +30,7 @@ import {
     FileIcon,
     CommandIcon,
     StethoscopeIcon,
+    CalendarIcon,
 } from "lucide-react";
 
 const data = {
@@ -53,6 +54,11 @@ const data = {
             title: "Leads",
             url: "/leads",
             icon: <ChartBarIcon />,
+        },
+        {
+            title: "Appointments",
+            url: "/appointments",
+            icon: <CalendarIcon />,
         },
         // {
         //     title: "Projects",

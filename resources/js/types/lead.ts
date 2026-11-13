@@ -1,7 +1,17 @@
 export type LeadStatus =
+    | 'New patients'
+    | 'Contacted patients'
+    | 'Consultation Scheduled'
+    | 'Consultation Booked'
+    | 'Follow up patients'
+    | 'Confirmed patients'
+    | 'Reschedule'
+    | 'New Patients'
+    | 'Contacted Patients'
+    | 'Follow-up Patients'
+    | 'Confirmed Patients'
     | 'New'
     | 'Contacted'
-    | 'Consultation Scheduled'
     | 'Treatment Plan Sent'
     | 'Won'
     | 'Lost';

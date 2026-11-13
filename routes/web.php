@@ -8,15 +8,21 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadFormFieldController;
 use App\Http\Controllers\PipelineController;
 use App\Models\Appointment;
+use App\Models\Doctor;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    $bookedSlots = Appointment::whereIn('status', ['Confirmed', 'Scheduled', 'In Progress'])
+    $bookedSlots = Appointment::whereIn('status', ['Confirmed', 'Scheduled', 'In Progress', 'Awaiting Confirmation'])
         ->select(['id', 'doctor', 'date', 'time', 'status'])
         ->get();
 
+    $doctors = Doctor::active()
+        ->orderBy('id')
+        ->get(['id', 'name', 'specialty', 'consultation_fee', 'room', 'email', 'phone', 'is_active']);
+
     return inertia('welcome', [
         'bookedSlots' => $bookedSlots,
+        'doctors' => $doctors,
     ]);
 })->name('home');
 
@@ -41,6 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/pipeline', [PipelineController::class, 'index'])->name('pipeline');
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
     Route::get('/leads/{id}', [LeadController::class, 'show'])->name('leads.show');
+    Route::get('/appointments', [AppointmentController::class, 'registry'])->name('appointments.index');
 
     // APPOINTMENT MANAGEMENT APIS
     Route::get('/api/patients', [AppointmentController::class, 'patients'])->name('patients.index');

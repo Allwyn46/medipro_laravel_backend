@@ -1,128 +1,75 @@
-# Single-Clinic Role-Based Access Control (RBAC) & Doctor Data Isolation
+# Dedicated Appointments Navigation & Advanced Schedule Filtering
 
 * **Author:** allwyn46
-* **Date:** 2026-11-10
+* **Date:** 2026-11-13
 
 ## Overview
 
-MediPro operates as a clinic CRM and appointment booking system. Currently, all staff share a single administrative view with unpartitioned access to revenue figures, patient records, and daily schedules. This feature introduces a two-tier Role-Based Access Control (RBAC) architecture separating **Clinic Administrators** from **Assigned Doctors**, backed by relational `doctor_id` scoping across all patient and appointment data.
+Clinical staff and specialists need an authoritative, full-screen registry to search, filter, and audit patient appointments across any date window and lifecycle status without cluttering the operational front-desk dashboard. Currently, appointments are embedded on the main dashboard alongside revenue widgets, where filtering is restricted to basic search, doctor selection, and single-day tabs (Today/Tomorrow).
 
-1. **Admin Role (`role: admin`)**: Retains complete clinic-wide oversight. Admins view global clinic revenue, aggregate patient schedules, the clinic-wide lead pipeline, manage custom intake fields (`/settings/leads`), and provision doctor user accounts.
-2. **Doctor Role (`role: doctor`)**: Scoped exclusively to assigned clinical workflows. Doctors log in with individual credentials and view only their assigned appointments, their assigned patient leads, their individual consultation revenue, and their clinical notes.
-3. **Doctor Entity Model**: Dedicated `doctors` relational table linked 1-to-1 with `users` (`user_id`), storing clinical specialty, contact details, consultation fee, and active status.
-4. **Relational Scoping**: Replaces legacy plain-text `doctor` strings with foreign key `doctor_id` on both `appointments` and `leads` tables (`nullOnDelete` to preserve historical records).
+This feature introduces a dedicated "Appointments" tab directly beneath "Leads" in the main sidebar, navigating to `/appointments`. The page provides an advanced, read-only data table featuring multi-status selection (enabling concurrent filtering across statuses such as `Confirmed`, `Pending`, `Awaiting Confirmation`, and `Reschedule`), dual-layer date filtering (combining quick preset pills like `Today`, `Tomorrow`, `This Week`, and `This Month` with a custom date-range picker), and strict doctor role-based scoping so clinicians only see their own appointments while administrators retain clinic-wide visibility. The dashboard's existing appointments table remains intact for daily front-desk operations.
 
 ## Analysis
 
-The 7-lens Goldfish review evaluated the feature across UX ergonomics, database constraints, architectural boundaries, and inventive software transforms:
+Evaluating this concept against the live MediPro codebase across seven architectural review lenses surfaces several technical requirements and constraints:
 
-### 1. Data Model & Relational Integrity (`structural` & `codebase_details`)
-* **`users` Table Extension**:
-  * Add `role` column (`string`, values: `'admin'`, `'doctor'`, default `'doctor'`, indexed).
-* **New `doctors` Table**:
-  * Fields: `id`, `user_id` (foreign key to `users`, unique, cascade on delete), `name` (string), `specialty` (string), `phone` (string, nullable), `email` (string, unique), `consultation_fee` (decimal 10,2), `is_active` (boolean, default true), `timestamps`.
-* **Foreign Key Scoping on `appointments` and `leads`**:
-  * Add `doctor_id` nullable foreign key referencing `doctors.id` with `nullOnDelete()`.
-  * Index `doctor_id` on both tables for performant query filtering.
-  * Keep legacy `doctor` string column during transition, backed by an accessor (`getDoctorNameAttribute`) for backward compatibility.
-* **Initial Data Migration & Backfill**:
-  * Database migration creates initial `Doctor` records and corresponding `User` credentials for existing seeded specialists (`Dr. Eddie Lake`, `Dr. Jamik Tashpulatov`, `Dr. Emily Whalen`, `Dr. Sarah Jenkins`).
-  * Relational backfill script matches existing `appointments.doctor` string to `doctors.name` and populates `doctor_id`.
+1. **Routing and Controller Method Disambiguation:**
+   `AppointmentController` already defines an `index(): JsonResponse` method used by JSON consumers. Overwriting or overloading this method creates a route collision. The dedicated Inertia page must use a dedicated controller action, `registry(Request $request): Response`, registered as `Route::get('/appointments', [AppointmentController::class, 'registry'])->name('appointments.index');`.
 
-### 2. Authorization & Scoping Layer (`implementation_readiness` & `zoom_out`)
-* **Route Protection via Dedicated Middleware**:
-  * `EnsureUserIsAdmin` middleware guards:
-    * `/settings/*` and `/api/settings/*` (Lead form fields).
-    * `/api/doctors/*` (Doctor management and provisioning).
-    * `/api/appointments/reset-demo` (Administrative demo reset).
-* **Policy Enforcement**:
-  * `LeadPolicy`:
-    * `view(User $user, Lead $lead)`: `$user->isAdmin() || $lead->doctor_id === $user->doctor?->id`
-    * `update(User $user, Lead $lead)`: `$user->isAdmin() || $lead->doctor_id === $user->doctor?->id`
-  * `AppointmentPolicy`:
-    * `view(User $user, Appointment $app)`: `$user->isAdmin() || $app->doctor_id === $user->doctor?->id`
-    * `update(User $user, Appointment $app)`: `$user->isAdmin() || $app->doctor_id === $user->doctor?->id`
-* **Controller Query Scoping**:
-  * `DashboardController`:
-    * Admin: clinic-wide revenue, appointments count, active leads count.
-    * Doctor: `SUM(value)` on `Won` leads assigned to `doctor_id`, appointment count for `doctor_id`, and daily schedule filtered to this doctor.
-  * `LeadController::getLeads()`: Scoped to `where('doctor_id', $user->doctor->id)` when authenticated user is a doctor.
-  * `AppointmentController::patients()`: Restricts searchable patient list to the doctor's assigned patients to prevent cross-doctor patient data leakage.
+2. **Doctor-Level Scoping and Authorization Boundary:**
+   To maintain security isolation between specialists (as verified in `DoctorScopingTest.php`):
+   - When an authenticated user has the `doctor` role (`$user->isDoctor()`), the query must strictly restrict results to `$user->doctor->id`. Any input parameter such as `?doctor_id=...` passed in the query string must be ignored.
+   - When an authenticated administrator (`$user->isAdmin()`) visits the page, all clinic appointments are visible by default, and an optional specialist dropdown allows filtering by a specific doctor. The list of active doctors is passed as a prop exclusively to administrators.
 
-### 3. Edge Cases & Operational Triage (`zoom_out` & `comprehension`)
-* **Unassigned Leads and Bookings**:
-  * Public inquiries via `welcome.tsx` or external sources may arrive without an assigned doctor (`doctor_id = null`).
-  * *Triage Protocol*: Unassigned appointments and leads are visible in the Admin workspace with an "Unassigned Specialist" badge. Admins assign a doctor, instantly dispatching the record into that doctor's workspace.
-* **Doctor Deactivation vs Financial Record Preservation**:
-  * Using `nullOnDelete()` ensures that if a doctor leaves the clinic or their user account is deactivated (`is_active = false`), patient billing records, historical consultations, and past activity notes remain intact in the clinic audit log.
+3. **Date Normalization for Interval Filtering:**
+   Appointment records in the database store dates as text strings (`YYYY-MM-DD`, alongside relative values like `'Today'`, `'Tomorrow'`, `'Nov 6'`). Evaluating interval conditions (such as `date >= dateFrom && date <= dateTo`) against unnormalized strings produces inaccurate results. The client-side table must use a date normalizer mirroring `Appointment::getScheduledDate()` that converts relative and formatted strings into standardized ISO date strings (`YYYY-MM-DD`) before interval checks.
 
-### 4. TRIZ Inventive Contradictions & Pattern Resolutions (`inventive_catalyst`)
-* **Contradiction 1: Public Booking Calendar vs Private Doctor Scoping**:
-  * *Conflict*: Appointment slots must be strictly isolated to assigned doctors, yet public guests on `welcome.tsx` need to view taken slots to prevent double-booking.
-  * *Resolution (Separation by Scope & Anonymization)*:
-    * Keep `GET /api/appointments/booked-slots` public, returning ONLY `{ date, time, doctor_id, status }` without patient names, phone numbers, or revenue values.
-    * Keep full appointment details strictly authenticated and filtered by `doctor_id`.
-* **Contradiction 2: Dynamic Doctor Creation vs Hardcoded Selectors**:
-  * *Conflict*: Admins need to add new doctors dynamically, but booking dialogs currently embed hardcoded arrays (`CLINIC_DOCTORS`, `CLINICAL_SERVICES`).
-  * *Resolution (Shared Props Injection)*:
-    * Expose active doctors via Inertia shared props (`doctors: Doctor::active()->get(['id', 'name', 'specialty'])`).
-    * Booking and intake dialog dropdowns consume dynamic `doctors` prop with graceful fallback to defaults.
+4. **Multi-Status Selection and Quick Groupings:**
+   Instead of a single dropdown, status filtering uses a faceted multi-select popover with checkboxes for each lifecycle status (`Confirmed`, `In Progress`, `Scheduled`, `Completed`, `Cancelled`, `Pending`, `Awaiting Confirmation`, `Reschedule`). Two clinical macro shortcuts are provided:
+   - "Needs Action" (selects `Pending` and `Awaiting Confirmation`).
+   - "Active Schedule" (selects `Confirmed`, `In Progress`, and `Scheduled`).
+
+5. **Read-Only Ledger Boundary with Slide-Over Audit Drawer:**
+   In line with the requirement for no direct row mutations, the registry omits mutating buttons (such as status updates, cancellations, or check-ins). To allow clinical staff to inspect complete visit context, rows or action menus trigger a slide-over audit drawer (`Sheet`) displaying booking timestamps, confirmation tokens, clinical notes, and a navigational link to the patient lead (`/leads/{id}`).
+
+6. **Retention of the Dashboard Schedule View:**
+   The dashboard's existing table remains untouched. It serves as the immediate daily triage and check-in station, while `/appointments` acts as the analytical and audit registry.
 
 ## Goals vs. Non-Goals
 
 * **In-Scope Goals:**
-  * Add `role` column (`admin` / `doctor`) to `users` table.
-  * Create `Doctor` model and `doctors` table linked to `users` via `user_id`.
-  * Add `doctor_id` foreign key with index to `appointments` and `leads` tables.
-  * Seed user credentials and doctor profiles for existing clinicians and backfill historical data.
-  * Build `EnsureUserIsAdmin` middleware to lock down `/settings/*` and admin APIs.
-  * Authorize lead and appointment updates via Laravel Policies (`LeadPolicy`, `AppointmentPolicy`).
-  * Scope `DashboardController`, `LeadController`, `PipelineController`, and `AppointmentController` by authenticated doctor.
-  * Conditionally render Settings navigation in `nav-user.tsx` only for Admins.
-  * Expose dynamic active doctors to booking and intake dialogs.
+  * Add "Appointments" to `navMain` in `resources/js/components/app-sidebar.tsx` directly under "Leads", rendered with `CalendarIcon`.
+  * Define `Route::get('/appointments', [AppointmentController::class, 'registry'])->name('appointments.index');` protected by the `auth` middleware.
+  * Implement `AppointmentController::registry` enforcing strict doctor-level scoping and admin-only doctor list props.
+  * Build a dedicated Inertia page (`resources/js/pages/appointments/index.tsx`) using the standard clinic `Layout`.
+  * Support multi-status selection via a multi-select popover with count badges and reset capability.
+  * Support dual-layer date filtering: preset pills (`All`, `Today`, `Tomorrow`, `This Week`, `This Month`) and custom date-range inputs (`From` and `To`).
+  * Implement date normalization for accurate range filtering across relative date strings.
+  * Implement a read-only slide-over inspection drawer for viewing detailed appointment audit data.
+  * Add comprehensive feature tests (`AppointmentsRegistryTest.php`) verifying doctor scoping, admin access, unauthorized redirects, and filter contracts.
+
 * **Out-of-Scope Non-Goals:**
-  * Multi-organization / multi-tenant database partitioning (separate clinics or hospital chains).
-  * Patient login accounts (patients remain external guest bookers).
-  * Granular custom permission matrix (e.g., custom checkboxes per action); access follows the clear two-tier `Admin` vs `Doctor` role distinction.
+  * Modifying or replacing the existing dashboard table.
+  * Adding mutating row actions (cancellations, check-in, status changes) directly inside the registry table.
+  * Calendar grid (month/week grid view) visualizations; this feature focuses strictly on tabular data filtering.
+  * External calendar syncing (Google Calendar, Apple iCal, Outlook).
 
 ## Alternatives Weighed
 
-* **Alternative 1: Name-based string matching on `doctor` column**:
-  * *Mechanism*: Filter records by `where('doctor', auth()->user()->name)`.
-  * *Pros*: Avoids database schema changes.
-  * *Cons*: Fragile. Editing a doctor's name breaks historical linkage. Doctors sharing a name cause data collisions.
-  * *Reason for Rejection*: `Rejected by author: Foreign key integrity with doctor_id is strictly required for data isolation and query performance.`
-* **Alternative 2: Multi-tenant schema separation (Database / Schema per Doctor)**:
-  * *Mechanism*: Separate database tables or schemas for each doctor.
-  * *Pros*: Maximum physical data segregation.
-  * *Cons*: Enormous infrastructure overhead, complex migrations, and breaks aggregate clinic-wide reporting for the clinic administrator.
-  * *Reason for Rejection*: `Rejected by author: MediPro is a single clinic where doctors collaborate under one administration. Row-level foreign key scoping cleanly achieves complete privacy without infrastructure fragmentation.`
-* **Alternative 3: Third-party permissions package (e.g. Spatie Laravel Permission)**:
-  * *Mechanism*: Pull in `spatie/laravel-permission` for multi-role dynamic gates.
-  * *Pros*: Broad feature set for role assignments.
-  * *Cons*: Adds unneeded package dependency, extra tables (`roles`, `permissions`, `model_has_roles`), and query overhead for a simple two-tier (`admin` / `doctor`) system.
-  * *Reason for Rejection*: `Rejected by author: Native Laravel Gates, Policies, and Middleware provide cleaner, faster execution without external dependency weight.`
-
-## Formal Constraints & System Invariants
-
-1. **Unassigned Triage Invariant**: Patient inquiries and bookings with `doctor_id = null` are strictly hidden from doctor workspaces and presented exclusively in the Administrator dashboard with an "Unassigned Specialist" badge. Only Admins have the authority to assign or reassign doctors.
-2. **Zero Cross-Doctor Patient Leakage**: The patient search lookup endpoint (`GET /api/patients`), single lead views (`/leads/{id}`), and appointment modification routes enforce that doctors can view and search only patients assigned to their own clinical record. Unauthorized attempts return HTTP 403 Forbidden.
-3. **Financial & Audit Preservation (`nullOnDelete`)**: Foreign key definitions on `appointments.doctor_id` and `leads.doctor_id` must use `nullOnDelete()`. Deactivating or deleting a doctor profile sets foreign keys to `NULL` while preserving historical financial transactions, billing records, and clinical consultation logs.
-4. **Admin-Exclusive Administrative Boundary**: The Settings route group (`/settings/*`), custom field API routes (`/api/settings/*`), doctor management endpoints (`/api/doctors/*`), and administrative utilities (`/api/appointments/reset-demo`) are protected by `EnsureUserIsAdmin` middleware. The user menu (`nav-user.tsx`) conditionally suppresses the Settings navigation link for doctors.
-5. **Dynamic Selector Binding**: All appointment booking and lead intake modals must dynamically bind doctor options to active records in the `doctors` table, replacing hardcoded static doctor arrays while maintaining fallback safety for offline tests.
+* **Overriding `AppointmentController::index` with Content Negotiation:**
+  * *Option:* Use `$request->wantsJson()` inside the existing `index` method to return either JSON or Inertia.
+  * *Reason Rejected by Reviewers:* Brittle and error-prone. Browser page reloads or client-side fetch requests with ambiguous `Accept` headers can trigger unexpected JSON responses. A dedicated method (`registry`) provides explicit separation.
+* **Inline Status Mutation Buttons on Each Row:**
+  * *Option:* Including quick "Complete" or "Cancel" buttons on table rows.
+  * *Reason Rejected by Author:* Violates the explicit requirement for a clean, non-mutating registry and increases the risk of accidental status mutations during historical audits.
+* **Replacing Dashboard Table with a Link to `/appointments`:**
+  * *Option:* Removing the dashboard appointments card completely.
+  * *Reason Rejected by Author:* Front-desk staff need an immediate view of today's queue and pending portal bookings without navigating away from the dashboard.
 
 ## Key Decisions & Staging for Next Steps
 
-1. **Role Definition**: Add `role` column (`admin`, `doctor`) to `users` table.
-2. **Doctor Model & Table**: Create `doctors` table (`id`, `user_id`, `name`, `specialty`, `phone`, `email`, `consultation_fee`, `is_active`) and `Doctor` Eloquent model.
-3. **Foreign Key Migration**: Add `doctor_id` foreign key with `nullOnDelete` to `appointments` and `leads` tables; backfill existing records.
-4. **Middleware & Policies**: Implement `EnsureUserIsAdmin` middleware; create `LeadPolicy` and `AppointmentPolicy`.
-5. **Scoped Controllers**:
-   * `DashboardController`: Scoped stats, schedule, and revenue.
-   * `LeadController`: Scoped `getLeads()`, policy check on `updateStatus()` and `addNote()`.
-   * `PipelineController`: Scoped Kanban board.
-   * `AppointmentController`: Scoped `patients()` lookup, confirmation, and decline actions.
-6. **Frontend Integration**:
-   * Dynamic auth user/doctor sharing via `HandleInertiaRequests`.
-   * Hide Settings link in `nav-user.tsx` for doctors.
-   * Replace hardcoded doctor/service lists with dynamic active doctor props.
+1. **Routing:** Register `GET /appointments` using `AppointmentController::registry`.
+2. **Access Security:** Hardcode `doctor_id` enforcement in the backend for doctor logins; ignore user-supplied `doctor_id` in doctor requests.
+3. **Filtering Stack:** Combine text search, multi-status faceted selection, specialist dropdown (admins), preset date pills, and custom date range picker.
+4. **Data Normalization:** Implement a shared date normalizer in TypeScript to ensure relative dates (`Today`, `Tomorrow`) match calendar filters correctly.
+5. **Detailed Inspection:** Provide a non-mutating slide-over audit drawer for full record inspection.

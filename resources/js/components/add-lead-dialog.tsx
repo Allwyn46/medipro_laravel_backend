@@ -54,12 +54,12 @@ const CLINIC_DOCTORS = [
 ];
 
 const LEAD_STATUSES: LeadStatus[] = [
-    "New",
-    "Contacted",
+    "New patients",
+    "Contacted patients",
     "Consultation Scheduled",
-    "Treatment Plan Sent",
-    "Won",
-    "Lost",
+    "Follow up patients",
+    "Confirmed patients",
+    "Reschedule",
 ];
 
 const LEAD_PRIORITIES: LeadPriority[] = ["High", "Medium", "Low"];
@@ -110,7 +110,7 @@ export function AddLeadDialog({
     const [email, setEmail] = React.useState("");
     const [service, setService] = React.useState(CLINICAL_SERVICES[0].title);
     const [doctor, setDoctor] = React.useState(initialDoctor);
-    const [status, setStatus] = React.useState<LeadStatus>("New");
+    const [status, setStatus] = React.useState<LeadStatus>("New patients");
     const [priority, setPriority] = React.useState<LeadPriority>("Medium");
     const [value, setValue] = React.useState<number | string>(1500);
     const [source, setSource] = React.useState("Staff Booking");
@@ -174,7 +174,7 @@ export function AddLeadDialog({
         setEmail("");
         setService(CLINICAL_SERVICES[0].title);
         setDoctor(CLINICAL_SERVICES[0].doctor);
-        setStatus("New");
+        setStatus("New patients");
         setPriority("Medium");
         setValue(1500);
         setSource("Staff Booking");

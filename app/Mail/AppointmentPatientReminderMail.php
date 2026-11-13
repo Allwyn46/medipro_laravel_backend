@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\Appointment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -19,8 +20,7 @@ class AppointmentPatientReminderMail extends Mailable
     public function __construct(
         public Appointment $appointment,
         public string $confirmUrl
-    ) {
-    }
+    ) {}
 
     /**
      * Get the message envelope.
@@ -49,7 +49,7 @@ class AppointmentPatientReminderMail extends Mailable
     /**
      * Get the attachments for the message.
      *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     * @return array<int, Attachment>
      */
     public function attachments(): array
     {

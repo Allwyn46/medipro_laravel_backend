@@ -98,6 +98,8 @@ function getStatusBadgeClass(status: AppointmentStatus) {
         case "Pending":
         case "Awaiting Confirmation":
             return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
+        case "Reschedule":
+            return "bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
     }
 }
 

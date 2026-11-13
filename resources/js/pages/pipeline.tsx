@@ -68,14 +68,14 @@ import type { Lead, LeadPriority, LeadStatus } from "@/types/lead";
 
 const STAGES: { status: LeadStatus; label: string; headerColor: string; dotColor: string }[] = [
     {
-        status: "New",
-        label: "New Inquiries",
+        status: "New patients",
+        label: "New patients",
         headerColor: "border-t-blue-500",
         dotColor: "bg-blue-500",
     },
     {
-        status: "Contacted",
-        label: "Contacted",
+        status: "Contacted patients",
+        label: "Contacted patients",
         headerColor: "border-t-amber-500",
         dotColor: "bg-amber-500",
     },
@@ -86,38 +86,48 @@ const STAGES: { status: LeadStatus; label: string; headerColor: string; dotColor
         dotColor: "bg-purple-500",
     },
     {
-        status: "Treatment Plan Sent",
-        label: "Treatment Plan Sent",
+        status: "Follow up patients",
+        label: "Follow up patients",
         headerColor: "border-t-indigo-500",
         dotColor: "bg-indigo-500",
     },
     {
-        status: "Won",
-        label: "Won / In Treatment",
+        status: "Confirmed patients",
+        label: "Confirmed patients",
         headerColor: "border-t-emerald-500",
         dotColor: "bg-emerald-500",
     },
     {
-        status: "Lost",
-        label: "Lost / Closed",
+        status: "Reschedule",
+        label: "Reschedule",
         headerColor: "border-t-zinc-400",
         dotColor: "bg-zinc-400",
     },
 ];
 
-function getStatusBadgeClass(status: LeadStatus) {
+function getStatusBadgeClass(status: LeadStatus | string) {
     switch (status) {
         case "New":
+        case "New patients":
+        case "New Patients":
             return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
         case "Contacted":
+        case "Contacted patients":
+        case "Contacted Patients":
             return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800";
         case "Consultation Scheduled":
+        case "Consultation Booked":
             return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800";
         case "Treatment Plan Sent":
+        case "Follow up patients":
+        case "Follow-up Patients":
             return "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800";
         case "Won":
+        case "Confirmed patients":
+        case "Confirmed Patients":
             return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800";
         case "Lost":
+        case "Reschedule":
             return "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
         default:
             return "";
@@ -314,10 +324,15 @@ export default function PipelinePage({
     // Compute metrics
     const totalPipelineValue = leads.reduce((acc, l) => acc + l.value, 0);
     const wonValue = leads
-        .filter((l) => l.status === "Won")
+        .filter(
+            (l) =>
+                l.status === "Won" ||
+                l.status === "Confirmed patients" ||
+                l.status === "Confirmed Patients"
+        )
         .reduce((acc, l) => acc + l.value, 0);
     const scheduledConsultations = leads.filter(
-        (l) => l.status === "Consultation Scheduled"
+        (l) => l.status === "Consultation Scheduled" || l.status === "Consultation Booked"
     ).length;
 
     // TanStack Table initialization
@@ -368,7 +383,7 @@ export default function PipelinePage({
                 footerSubtext: "Confirmed specialist visits",
             },
             {
-                title: "Won Treatments Value",
+                title: "Confirmed Patients Value",
                 value: `₹${wonValue.toLocaleString()}`,
                 badgeText: "+16.5%",
                 badgeTrend: "up",
@@ -438,9 +453,49 @@ export default function PipelinePage({
                     <TabsContent value="board" className="mt-0">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-start">
                             {STAGES.map((stage) => {
-                                const stageLeads = filteredLeads.filter(
-                                    (l) => l.status === stage.status
-                                );
+                                const stageLeads = filteredLeads.filter((l) => {
+                                    if (stage.status === "New patients") {
+                                        return (
+                                            l.status === "New patients" ||
+                                            l.status === "New Patients" ||
+                                            l.status === "New"
+                                        );
+                                    }
+                                    if (stage.status === "Contacted patients") {
+                                        return (
+                                            l.status === "Contacted patients" ||
+                                            l.status === "Contacted Patients" ||
+                                            l.status === "Contacted"
+                                        );
+                                    }
+                                    if (stage.status === "Consultation Scheduled") {
+                                        return (
+                                            l.status === "Consultation Scheduled" ||
+                                            l.status === "Consultation Booked"
+                                        );
+                                    }
+                                    if (stage.status === "Follow up patients") {
+                                        return (
+                                            l.status === "Follow up patients" ||
+                                            l.status === "Follow-up Patients" ||
+                                            l.status === "Treatment Plan Sent"
+                                        );
+                                    }
+                                    if (stage.status === "Confirmed patients") {
+                                        return (
+                                            l.status === "Confirmed patients" ||
+                                            l.status === "Confirmed Patients" ||
+                                            l.status === "Won"
+                                        );
+                                    }
+                                    if (stage.status === "Reschedule") {
+                                        return (
+                                            l.status === "Reschedule" ||
+                                            l.status === "Lost"
+                                        );
+                                    }
+                                    return l.status === stage.status;
+                                });
                                 const stageTotal = stageLeads.reduce(
                                     (acc, l) => acc + l.value,
                                     0
