@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import type { Appointment } from "@/types/appointment";
 
 interface ExpiredPageProps {
@@ -31,17 +32,7 @@ export default function ExpiredPage({
             {/* Navigation Bar */}
             <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-4 lg:px-8 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                    <div className="flex size-9 items-center justify-center rounded-xl bg-slate-900 text-white font-bold shadow-xs">
-                        <StethoscopeIcon className="size-5" />
-                    </div>
-                    <div>
-                        <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">
-                            MediPro
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-1.5 font-medium">
-                            Clinical Consultation Network
-                        </span>
-                    </div>
+                    <BrandLogo size="sm" />
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -171,7 +162,7 @@ export default function ExpiredPage({
 
             {/* Footer */}
             <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-                <p>&copy; {new Date().getFullYear()} MediPro Specialist Network &bull; All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()} Smart Tech Medical Clinic &bull; All rights reserved.</p>
             </footer>
         </div>
     );

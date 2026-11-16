@@ -5,6 +5,7 @@ import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { BrandLogo } from "@/components/brand-logo";
 import {
     Sidebar,
     SidebarContent,
@@ -179,15 +180,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
-                            className="data-[slot=sidebar-menu-button]:p-1.5!"
+                            className="data-[slot=sidebar-menu-button]:p-1.5! h-auto py-2"
                             render={<a href="/dashboard" />}
                         >
-                            <div className="flex size-7 items-center justify-center rounded-md bg-emerald-600 text-white shadow-xs">
-                                <StethoscopeIcon className="size-4" />
-                            </div>
-                            <span className="text-base font-semibold">
-                                Medi Pro
-                            </span>
+                            <BrandLogo size="sm" />
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>

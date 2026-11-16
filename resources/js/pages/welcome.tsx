@@ -18,8 +18,12 @@ import {
     UsersIcon,
     ActivityIcon,
     AlertCircleIcon,
-    BanIcon,
+    AwardIcon,
+    CpuIcon,
     CheckIcon,
+    ChevronRightIcon,
+    SmileIcon,
+    MicroscopeIcon,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +45,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { BrandLogo, SmartTechIcon } from "@/components/brand-logo";
 import type { Appointment } from "@/types/appointment";
 import type { DoctorProfile } from "@/types/auth";
 
@@ -51,7 +56,7 @@ const DEFAULT_DOCTORS: DoctorProfile[] = [
         specialty: "Dental Implants & Cosmetic",
         consultation_fee: 1500,
         room: "Room 101",
-        email: "eddie.lake@medipro.com",
+        email: "eddie.lake@smarttechclinic.com",
         is_active: true,
     },
     {
@@ -60,7 +65,7 @@ const DEFAULT_DOCTORS: DoctorProfile[] = [
         specialty: "Orthodontics & Clear Aligners",
         consultation_fee: 2000,
         room: "Room 102",
-        email: "jamik.tashpulatov@medipro.com",
+        email: "jamik.tashpulatov@smarttechclinic.com",
         is_active: true,
     },
     {
@@ -69,7 +74,7 @@ const DEFAULT_DOCTORS: DoctorProfile[] = [
         specialty: "Cardiology Checkup & ECG",
         consultation_fee: 1800,
         room: "Room 201",
-        email: "emily.whalen@medipro.com",
+        email: "emily.whalen@smarttechclinic.com",
         is_active: true,
     },
     {
@@ -78,7 +83,7 @@ const DEFAULT_DOCTORS: DoctorProfile[] = [
         specialty: "General & Preventative Care",
         consultation_fee: 1200,
         room: "Room 103",
-        email: "sarah.jenkins@medipro.com",
+        email: "sarah.jenkins@smarttechclinic.com",
         is_active: true,
     },
 ];
@@ -98,7 +103,7 @@ const ALL_TIME_SLOTS = [
     { time: "10:00 AM", period: "Morning" },
     { time: "11:00 AM", period: "Late Morning" },
     { time: "11:30 AM", period: "Late Morning" },
-    { time: "01:30 PM", period: "Early Afternoon" },
+    { time: "01:30 PM", period: "Afternoon" },
     { time: "02:00 PM", period: "Afternoon" },
     { time: "02:15 PM", period: "Afternoon" },
     { time: "03:00 PM", period: "Afternoon" },
@@ -108,387 +113,300 @@ const ALL_TIME_SLOTS = [
     { time: "05:30 PM", period: "Evening" },
 ];
 
-function getLocalDateString(offsetDays = 0): string {
-    const d = new Date();
-    d.setDate(d.getDate() + offsetDays);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-}
-
-function normalizeTime(time: string): string {
-    if (!time) return "";
-    return time.trim().replace(/^0/, "").replace(/\s+/g, " ").toUpperCase();
-}
-
-function isSameDate(aptDate: string, selectedDate: string): boolean {
-    if (!aptDate || !selectedDate) return false;
-
-    if (aptDate.toLowerCase() === selectedDate.toLowerCase()) return true;
-
-    const todayStr = getLocalDateString(0);
-    const tomorrowStr = getLocalDateString(1);
-
-    if (aptDate === "Today" && selectedDate === todayStr) return true;
-    if (aptDate === "Tomorrow" && selectedDate === tomorrowStr) return true;
-
-    try {
-        const selectedObj = new Date(selectedDate);
-        if (!isNaN(selectedObj.getTime())) {
-            const currentYear = new Date().getFullYear();
-            const aptObj = new Date(`${aptDate} ${currentYear}`);
-            if (
-                !isNaN(aptObj.getTime()) &&
-                aptObj.getMonth() === selectedObj.getMonth() &&
-                aptObj.getDate() === selectedObj.getDate()
-            ) {
-                return true;
-            }
-        }
-    } catch {
-        // ignore
-    }
-
-    return false;
-}
-
-function parseTimeToMinutes(timeStr: string): number {
-    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (!match) return -1;
-    let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const period = match[3].toUpperCase();
-
-    if (period === "PM" && hours < 12) {
-        hours += 12;
-    } else if (period === "AM" && hours === 12) {
-        hours = 0;
-    }
-
-    return hours * 60 + minutes;
-}
-
-function isSlotPast(timeStr: string, dateStr: string): boolean {
-    const now = new Date();
-    const todayY = now.getFullYear();
-    const todayM = String(now.getMonth() + 1).padStart(2, "0");
-    const todayD = String(now.getDate()).padStart(2, "0");
-    const todayStr = `${todayY}-${todayM}-${todayD}`;
-
-    const effectiveDate = dateStr === "Today" ? todayStr : dateStr;
-
-    if (effectiveDate < todayStr) {
-        return true;
-    }
-
-    if (effectiveDate > todayStr) {
-        return false;
-    }
-
-    const slotMinutes = parseTimeToMinutes(timeStr);
-    if (slotMinutes === -1) return false;
-
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    return slotMinutes <= currentMinutes;
-}
-
 const SERVICES = [
     {
-        title: "Dental Implants & Cosmetic",
-        doctor: "Dr. Eddie Lake",
-        icon: StethoscopeIcon,
+        title: "Cardiology & ECG",
         description:
-            "Full-arch implants, smile makeover, porcelain veneers, and teeth whitening.",
-        badge: "Dentistry",
-    },
-    {
-        title: "Orthodontics & Clear Aligners",
-        doctor: "Dr. Jamik Tashpulatov",
-        icon: SparklesIcon,
-        description:
-            "3D digital scans, transparent aligners, bite correction, and retainers.",
-        badge: "Orthodontics",
-    },
-    {
-        title: "Cardiology & Heart Health",
+            "Advanced cardiac telemetry, echo scans, and preventive hypertension management.",
         doctor: "Dr. Emily Whalen",
         icon: HeartPulseIcon,
-        description:
-            "Cardiac stress tests, ECG, blood pressure management, and lipid care.",
-        badge: "Cardiology",
+        badge: "Specialist Lab",
+        tag: "Heart & Vascular",
     },
     {
-        title: "Dermatology & Laser Therapy",
+        title: "Orthodontics & Aligners",
+        description:
+            "AI-guided smile correction, Invisalign clear aligners, and dental reconstruction.",
+        doctor: "Dr. Jamik Tashpulatov",
+        icon: SmileIcon,
+        badge: "Digital Scans",
+        tag: "Dental Care",
+    },
+    {
+        title: "Dental Implants & Surgery",
+        description:
+            "Precision 3D dental mapping, tooth restoration, painless laser whitening.",
         doctor: "Dr. Eddie Lake",
         icon: ActivityIcon,
-        description:
-            "Advanced laser resurfacing, skin therapy, acne treatments, and screenings.",
-        badge: "Dermatology",
+        badge: "Cosmetic Care",
+        tag: "Oral Surgery",
     },
     {
-        title: "Orthopedics & Joint Clinic",
+        title: "General & Family Medicine",
+        description:
+            "Comprehensive annual physicals, blood biomarker screenings, and preventative care.",
+        doctor: "Dr. Sarah Jenkins",
+        icon: StethoscopeIcon,
+        badge: "Zero-Wait",
+        tag: "Primary Care",
+    },
+    {
+        title: "Neurology & Diagnostics",
+        description:
+            "State-of-the-art neurological mapping, migraine treatments, and cognitive evaluations.",
         doctor: "Dr. Emily Whalen",
-        icon: ShieldCheckIcon,
-        description:
-            "Arthroscopy assessments, meniscus treatment, joint pain, and sports medicine.",
-        badge: "Orthopedics",
+        icon: CpuIcon,
+        badge: "Next-Gen Tech",
+        tag: "Diagnostics",
     },
     {
-        title: "Executive Health Screening",
-        doctor: "Dr. Jamik Tashpulatov",
-        icon: Building2Icon,
+        title: "Pediatrics & Child Wellness",
         description:
-            "Full-body checkups, comprehensive pathology diagnostics, and wellness plans.",
-        badge: "General Health",
+            "Gentle child-friendly checkups, growth tracking, and rapid symptom care.",
+        doctor: "Dr. Sarah Jenkins",
+        icon: ShieldCheckIcon,
+        badge: "Family Focused",
+        tag: "Child Health",
     },
 ];
 
-export default function Welcome({
-    bookedSlots = [],
-    doctors = [],
-}: {
-    bookedSlots?: Appointment[];
-    doctors?: DoctorProfile[];
-}) {
-    const { auth, clinicDoctors } = usePage<{
-        auth?: { user?: { name: string } };
-        clinicDoctors?: DoctorProfile[];
-    }>().props;
+const CLINIC_FACILITIES = [
+    {
+        title: "State-of-the-Art Diagnostic Suite",
+        category: "Advanced Imaging & Diagnostics",
+        image: "/images/clinic/diagnostic-suite.jpg",
+        description:
+            "Equipped with high-precision digital labs, ECG telemetry, and AI-accelerated imaging for accurate, same-day test results.",
+    },
+    {
+        title: "Private Consultation Suites",
+        category: "Patient Comfort & Care",
+        image: "/images/clinic/patient-care.jpg",
+        description:
+            "Soundproofed, ergonomic consultation rooms where doctors spend dedicated time without rushed appointments.",
+    },
+    {
+        title: "Specialized Dental Operatory",
+        category: "Surgical & Cosmetic Suite",
+        image: "/images/clinic/dental-care.jpg",
+        description:
+            "Featuring 3D intraoral optical scanning, painless dental procedures, and medical-grade sterilization.",
+    },
+    {
+        title: "Concierge Welcome & Recovery Lounge",
+        category: "Zero Waiting Facility",
+        image: "/images/clinic/modern-facility.jpg",
+        description:
+            "Boutique clinic atmosphere designed for relaxation, complimentary refreshments, and zero waiting room delays.",
+    },
+];
 
-    const doctorList: DoctorProfile[] = React.useMemo(() => {
+const TESTIMONIALS = [
+    {
+        name: "David Sterling",
+        service: "Cardiology Consultation",
+        rating: 5,
+        text: "Booking through the Smart Tech portal took under 60 seconds and synced straight to my Google Calendar. Dr. Emily was extraordinarily thorough with my ECG report. Best clinical experience in the city.",
+        date: "2 days ago",
+    },
+    {
+        name: "Elena Rostova",
+        service: "Orthodontics & Aligners",
+        rating: 5,
+        text: "The digital 3D scans and lack of waiting time blew me away. I arrived, was greeted immediately, and Dr. Jamik walked me through my clear aligner plan step-by-step.",
+        date: "Last week",
+    },
+    {
+        name: "Marcus Vance",
+        service: "General Checkup",
+        rating: 5,
+        text: "Finally a medical clinic that respects your time! Modern, immaculate facilities and zero delays. The automatic appointment reminder and calendar invites were flawless.",
+        date: "2 weeks ago",
+    },
+];
+
+function getLocalDateString(offsetDays = 0): string {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function formatDateLabel(dateStr: string): string {
+    if (!dateStr) return "";
+    const today = getLocalDateString(0);
+    const tomorrow = getLocalDateString(1);
+    if (dateStr === today) return "Today";
+    if (dateStr === tomorrow) return "Tomorrow";
+    try {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const dateObj = new Date(y, m - 1, d);
+        return dateObj.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+        });
+    } catch {
+        return dateStr;
+    }
+}
+
+function parseSlotTime(timeStr: string, dateStr: string): Date | null {
+    if (!timeStr || !dateStr) return null;
+    try {
+        const parts = timeStr.trim().match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!parts) return null;
+        let hours = parseInt(parts[1], 10);
+        const minutes = parseInt(parts[2], 10);
+        const modifier = parts[3].toUpperCase();
+        if (modifier === "PM" && hours < 12) hours += 12;
+        if (modifier === "AM" && hours === 12) hours = 0;
+
+        const [y, m, d] = dateStr.split("-").map(Number);
+        return new Date(y, m - 1, d, hours, minutes, 0, 0);
+    } catch {
+        return null;
+    }
+}
+
+function isSlotPast(timeStr: string, dateStr: string): boolean {
+    const today = getLocalDateString(0);
+    if (dateStr !== today) return false;
+    const slotDate = parseSlotTime(timeStr, dateStr);
+    if (!slotDate) return false;
+    return slotDate.getTime() < Date.now();
+}
+
+interface BookedSlot {
+    id: number;
+    doctor: string;
+    date: string;
+    time: string;
+    status: string;
+}
+
+interface WelcomeProps {
+    doctors?: DoctorProfile[];
+    bookedSlots?: BookedSlot[];
+}
+
+export default function Welcome({
+    doctors = [],
+    bookedSlots = [],
+}: WelcomeProps) {
+    const { auth } = usePage().props as unknown as {
+        auth?: { user?: any };
+    };
+
+    const clinicDoctors = React.useMemo(() => {
         if (doctors && doctors.length > 0) {
             return doctors;
         }
-        if (clinicDoctors && clinicDoctors.length > 0) {
-            return clinicDoctors;
-        }
         return DEFAULT_DOCTORS;
-    }, [doctors, clinicDoctors]);
+    }, [doctors]);
 
-    const dynamicServices = React.useMemo(() => {
-        const base = [...SERVICES];
-        doctorList.forEach((doc) => {
-            if (
-                doc.specialty &&
-                !base.some(
-                    (s) => s.title.toLowerCase() === doc.specialty.toLowerCase(),
-                )
-            ) {
-                base.push({
-                    title: doc.specialty,
-                    doctor: doc.name,
-                    icon: StethoscopeIcon,
-                    description: `Specialized medical consultation and care with ${doc.name}.`,
-                    badge: doc.specialty.split("&")[0].trim(),
-                });
-            }
-        });
-        return base;
-    }, [doctorList]);
+    const doctorList = clinicDoctors;
+    const defaultDoctor = doctorList[0]?.name || "Dr. Eddie Lake";
+    const defaultService =
+        doctorList[0]?.specialty || "Dental Implants & Cosmetic";
+
+    const [bookingData, setBookingData] = React.useState({
+        patientName: "",
+        phone: "",
+        email: "",
+        service: defaultService,
+        doctor: defaultDoctor,
+        date: getLocalDateString(0),
+        timeSlot: "09:00 AM",
+        notes: "",
+    });
 
     const [formSubmitted, setFormSubmitted] = React.useState(false);
-
-    const [confirmedAppointments, setConfirmedAppointments] = React.useState<
-        Appointment[]
-    >(() => {
-        if (typeof window !== "undefined") {
-            const stored = localStorage.getItem("medi_confirmed_appointments");
-            if (stored) {
-                try {
-                    return JSON.parse(stored);
-                } catch (e) {
-                    console.error("Failed to parse confirmed appointments", e);
-                }
-            }
-        }
-        return bookedSlots;
-    });
-
-    const [pendingAppointments, setPendingAppointments] = React.useState<
-        Appointment[]
-    >(() => {
-        if (typeof window !== "undefined") {
-            const stored = localStorage.getItem("medi_pending_appointments");
-            if (stored) {
-                try {
-                    return JSON.parse(stored);
-                } catch (e) {
-                    console.error("Failed to parse pending appointments", e);
-                }
-            }
-        }
-        return [];
-    });
+    const [isScrolledPastHero, setIsScrolledPastHero] = React.useState(false);
 
     React.useEffect(() => {
-        if (bookedSlots.length > 0 && !localStorage.getItem("medi_confirmed_appointments")) {
-            setConfirmedAppointments(bookedSlots);
-        }
-    }, [bookedSlots]);
-
-    // Sync with storage events from dashboard confirmations
-    React.useEffect(() => {
-        const handleSync = () => {
-            if (typeof window !== "undefined") {
-                const storedConf = localStorage.getItem(
-                    "medi_confirmed_appointments",
-                );
-                if (storedConf) {
-                    try {
-                        setConfirmedAppointments(JSON.parse(storedConf));
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }
-                const storedPend = localStorage.getItem(
-                    "medi_pending_appointments",
-                );
-                if (storedPend) {
-                    try {
-                        setPendingAppointments(JSON.parse(storedPend));
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }
+        const handleScroll = () => {
+            const heroEl = document.getElementById("hero-section");
+            if (heroEl) {
+                const rect = heroEl.getBoundingClientRect();
+                setIsScrolledPastHero(rect.bottom <= 80);
+            } else {
+                setIsScrolledPastHero(window.scrollY > 450);
             }
         };
 
-        window.addEventListener("medi_appointments_updated", handleSync);
-        window.addEventListener("storage", handleSync);
-        return () => {
-            window.removeEventListener("medi_appointments_updated", handleSync);
-            window.removeEventListener("storage", handleSync);
-        };
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        handleScroll();
+        return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
+    // Filter appointments from backend bookedSlots prop
     const getBookedInfo = React.useCallback(
-        (timeSlot: string, doctor: string, date: string) => {
-            if (!timeSlot || !doctor || !date) {
-                return { isBooked: false, patientName: "", status: "" };
-            }
-
-            // Check confirmed clinic schedule (including Confirmed, In Progress, Scheduled)
-            const confirmedMatch = confirmedAppointments.find((apt) => {
-                if (apt.status === "Cancelled") return false;
-                if (apt.doctor.toLowerCase() !== doctor.toLowerCase())
-                    return false;
-                if (!isSameDate(apt.date, date)) return false;
-                return normalizeTime(apt.time) === normalizeTime(timeSlot);
+        (timeStr: string, doctorName: string, dateStr: string) => {
+            const match = bookedSlots.find((b) => {
+                const sameDoc =
+                    b.doctor.trim().toLowerCase() ===
+                    doctorName.trim().toLowerCase();
+                const bDate =
+                    b.date === "Today"
+                        ? getLocalDateString(0)
+                        : b.date === "Tomorrow"
+                          ? getLocalDateString(1)
+                          : b.date;
+                const reqDate =
+                    dateStr === "Today"
+                        ? getLocalDateString(0)
+                        : dateStr === "Tomorrow"
+                          ? getLocalDateString(1)
+                          : dateStr;
+                const sameDate = bDate === reqDate;
+                const sameTime =
+                    b.time.trim().toLowerCase() ===
+                    timeStr.trim().toLowerCase();
+                return sameDoc && sameDate && sameTime;
             });
 
-            if (confirmedMatch) {
-                return {
-                    isBooked: true,
-                    patientName: confirmedMatch.patientName,
-                    status: confirmedMatch.status,
-                };
-            }
-
-            // Check pending requests to prevent double-booking
-            const pendingMatch = pendingAppointments.find((apt) => {
-                if (apt.status === "Cancelled") return false;
-                if (apt.doctor.toLowerCase() !== doctor.toLowerCase())
-                    return false;
-                if (!isSameDate(apt.date, date)) return false;
-                return normalizeTime(apt.time) === normalizeTime(timeSlot);
-            });
-
-            if (pendingMatch) {
-                return {
-                    isBooked: true,
-                    patientName: pendingMatch.patientName,
-                    status: "Pending",
-                };
-            }
-
-            return { isBooked: false, patientName: "", status: "" };
+            return {
+                isBooked: !!match,
+                status: match?.status || null,
+            };
         },
-        [confirmedAppointments, pendingAppointments],
+        [bookedSlots],
     );
-
-    const [bookingData, setBookingData] = React.useState(() => {
-        const todayStr = getLocalDateString(0);
-        const defaultDoctor = doctorList[0]?.name || "Dr. Eddie Lake";
-        const initialSlot =
-            ALL_TIME_SLOTS.find((s) => {
-                const past = isSlotPast(s.time, todayStr);
-                const booked = bookedSlots.some(
-                    (apt) =>
-                        apt.status !== "Cancelled" &&
-                        apt.doctor.toLowerCase() ===
-                            defaultDoctor.toLowerCase() &&
-                        (apt.date === "Today" || apt.date === todayStr) &&
-                        normalizeTime(apt.time) === normalizeTime(s.time),
-                );
-                return !past && !booked;
-            })?.time || "";
-
-        return {
-            patientName: "",
-            email: "",
-            phone: "",
-            service: doctorList[0]?.specialty || "Dental Implants & Cosmetic",
-            doctor: defaultDoctor,
-            date: todayStr,
-            timeSlot: initialSlot,
-            notes: "",
-        };
-    });
-
-    // Auto-select first available upcoming slot if currently selected slot becomes booked or has passed
-    React.useEffect(() => {
-        const isCurrentInvalid =
-            !bookingData.timeSlot ||
-            isSlotPast(bookingData.timeSlot, bookingData.date) ||
-            getBookedInfo(
-                bookingData.timeSlot,
-                bookingData.doctor,
-                bookingData.date,
-            ).isBooked;
-
-        if (isCurrentInvalid) {
-            const firstAvailable = ALL_TIME_SLOTS.find(
-                (s) =>
-                    !isSlotPast(s.time, bookingData.date) &&
-                    !getBookedInfo(s.time, bookingData.doctor, bookingData.date)
-                        .isBooked,
-            );
-            if (firstAvailable) {
-                setBookingData((prev) => ({
-                    ...prev,
-                    timeSlot: firstAvailable.time,
-                }));
-            }
-        }
-    }, [
-        bookingData.doctor,
-        bookingData.date,
-        getBookedInfo,
-        bookingData.timeSlot,
-    ]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (
             !bookingData.patientName ||
             !bookingData.phone ||
+            !bookingData.email ||
             !bookingData.date
         ) {
             alert(
-                "Please fill in your name, phone number, and preferred date.",
+                "Please fill in your name, phone number, email address, and preferred date.",
+            );
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(bookingData.email.trim())) {
+            alert(
+                "Please enter a valid email address for your calendar confirmation.",
             );
             return;
         }
 
         if (!bookingData.timeSlot) {
-            alert("Please select an available upcoming time slot.");
+            alert("Please select an available consultation slot.");
             return;
         }
 
         if (isSlotPast(bookingData.timeSlot, bookingData.date)) {
             alert(
-                `The time slot ${bookingData.timeSlot} has already passed for today. Please select an upcoming slot.`,
+                `The consultation slot ${bookingData.timeSlot} has already passed for today. Please pick an upcoming slot.`,
             );
             return;
         }
@@ -500,7 +418,7 @@ export default function Welcome({
         );
         if (bookedCheck.isBooked) {
             alert(
-                `The time slot ${bookingData.timeSlot} is already booked for ${bookingData.doctor} on this date. Please select an available slot.`,
+                `The time slot ${bookingData.timeSlot} is already booked for ${bookingData.doctor} on this date. Please select an alternate slot.`,
             );
             return;
         }
@@ -515,9 +433,7 @@ export default function Welcome({
         const newBooking: Appointment = {
             id: Date.now(),
             patientName: bookingData.patientName.trim(),
-            patientEmail:
-                bookingData.email.trim() ||
-                `${bookingData.patientName.toLowerCase().replace(/\s+/g, ".")}@example.com`,
+            patientEmail: bookingData.email.trim(),
             patientPhone: bookingData.phone.trim(),
             service: bookingData.service,
             doctor: bookingData.doctor,
@@ -530,7 +446,7 @@ export default function Welcome({
             duration: "45 mins",
             notes:
                 bookingData.notes.trim() ||
-                "Booked online via Medi Pro patient portal.",
+                "Booked online via Smart Tech Medical client portal.",
             source: "Website Booking",
             requestedAt: "Just now",
         };
@@ -560,7 +476,9 @@ export default function Welcome({
 
         try {
             const stored = localStorage.getItem("medi_pending_appointments");
-            const existingList: Appointment[] = stored ? JSON.parse(stored) : [];
+            const existingList: Appointment[] = stored
+                ? JSON.parse(stored)
+                : [];
             const updated = [newBooking, ...existingList];
             localStorage.setItem(
                 "medi_pending_appointments",
@@ -576,58 +494,122 @@ export default function Welcome({
 
     return (
         <>
-            <Head title="Book an Appointment" />
+            <Head title="Smart Tech Medical Clinic | Next-Gen Healthcare & Online Appointments" />
 
-            <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
-                {/* Top Navigation Bar */}
-                <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-                    <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-                                <StethoscopeIcon className="size-5" />
-                            </div>
-                            <div>
-                                <span className="text-lg font-bold tracking-tight text-foreground">
-                                    Medi Pro
-                                </span>
-                                {/* <span className="hidden sm:inline-block ml-2 text-xs text-muted-foreground border-l pl-2">
-                                    Specialist Medical Clinic
-                                </span> */}
-                            </div>
-                        </div>
+            <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+                {/* Fixed Navigation Bar: Transparent in Hero, Blurred in Other Sections */}
+                <header
+                    className={cn(
+                        "fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 ease-in-out",
+                        isScrolledPastHero
+                            ? "bg-background/85 backdrop-blur-xl border-b border-border/70 shadow-xs text-foreground"
+                            : "bg-transparent border-b border-transparent text-white shadow-none",
+                    )}
+                >
+                    <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+                        <Link
+                            href="/"
+                            className="transition-transform hover:scale-[1.02]"
+                        >
+                            <BrandLogo
+                                size="md"
+                                variant={isScrolledPastHero ? "auto" : "light"}
+                            />
+                        </Link>
 
-                        <nav className="hidden md:flex items-center gap-6 text-sm font-medium font-sans tracking-tight text-muted-foreground">
-                            <a
+                        <nav
+                            className={cn(
+                                "hidden lg:flex items-center gap-7 text-xs font-semibold tracking-wide uppercase transition-colors",
+                                isScrolledPastHero
+                                    ? "text-muted-foreground"
+                                    : "text-white/80",
+                            )}
+                        >
+                            {/* <a
                                 href="#booking"
-                                className="hover:text-foreground transition-colors"
+                                className={cn(
+                                    "transition-colors",
+                                    isScrolledPastHero
+                                        ? "hover:text-cyan-500"
+                                        : "hover:text-white",
+                                )}
                             >
                                 Book Appointment
                             </a>
                             <a
+                                href="#facilities"
+                                className={cn(
+                                    "transition-colors",
+                                    isScrolledPastHero
+                                        ? "hover:text-cyan-500"
+                                        : "hover:text-white",
+                                )}
+                            >
+                                Clinic Facilities
+                            </a>
+                            <a
                                 href="#services"
-                                className="hover:text-foreground transition-colors"
+                                className={cn(
+                                    "transition-colors",
+                                    isScrolledPastHero
+                                        ? "hover:text-cyan-500"
+                                        : "hover:text-white",
+                                )}
                             >
                                 Medical Services
                             </a>
                             <a
                                 href="#specialists"
-                                className="hover:text-foreground transition-colors"
+                                className={cn(
+                                    "transition-colors",
+                                    isScrolledPastHero
+                                        ? "hover:text-cyan-500"
+                                        : "hover:text-white",
+                                )}
                             >
-                                Our Specialists
+                                Specialists
+                            </a>
+                            <a
+                                href="#reviews"
+                                className={cn(
+                                    "transition-colors",
+                                    isScrolledPastHero
+                                        ? "hover:text-cyan-500"
+                                        : "hover:text-white",
+                                )}
+                            >
+                                Reviews
                             </a>
                             <a
                                 href="#contact"
-                                className="hover:text-foreground transition-colors"
+                                className={cn(
+                                    "transition-colors",
+                                    isScrolledPastHero
+                                        ? "hover:text-cyan-500"
+                                        : "hover:text-white",
+                                )}
                             >
-                                Contact & Hours
-                            </a>
+                                Location & Hours
+                            </a> */}
                         </nav>
 
                         <div className="flex items-center gap-3">
+                            {/* <Link
+                                href={auth?.user ? "/dashboard" : "/login"}
+                                prefetch
+                                className={cn(
+                                    "hidden sm:inline-flex text-xs font-medium transition-colors px-2 py-1",
+                                    isScrolledPastHero
+                                        ? "text-muted-foreground hover:text-foreground"
+                                        : "text-white/80 hover:text-white",
+                                )}
+                            >
+                                Staff Portal
+                            </Link> */}
                             <Button
                                 size="sm"
                                 render={<a href="#booking" />}
-                                className="bg-primary text-primary-foreground font-semibold shadow-xs"
+                                className="bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:via-blue-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-cyan-500/25 border-0 h-9 px-4 rounded-lg cursor-pointer transition-transform hover:scale-105"
                             >
                                 <CalendarIcon className="size-3.5 mr-1.5" />
                                 Book Appointment
@@ -636,91 +618,188 @@ export default function Welcome({
                     </div>
                 </header>
 
-                {/* Hero Section */}
-                <section className="relative overflow-hidden border-b bg-linear-to-b from-primary/5 via-background to-background py-16 md:py-24">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                            {/* Left Text */}
-                            <div className="lg:col-span-6 flex flex-col gap-6 text-center lg:text-left">
-                                <div className="inline-flex items-center justify-center lg:justify-start">
-                                    <Badge
-                                        variant="outline"
-                                        className="px-3 py-1 gap-1.5 text-xs font-medium border-primary/20 bg-primary/5 text-primary"
-                                    >
-                                        <SparklesIcon className="size-3.5" />
-                                        Accepting New Patients Today
-                                    </Badge>
+                {/* Hero Section: Clinic Imagery + Interactive Booking Engine */}
+                <section
+                    id="hero-section"
+                    className="relative overflow-hidden border-b border-border/40 bg-gradient-to-b from-slate-950 via-slate-900 to-background text-foreground pt-28 sm:pt-32 md:pt-36 pb-16 md:pb-24"
+                >
+                    {/* Background Glows matching Smart Tech Logo Colors */}
+                    <div className="pointer-events-none absolute -top-40 -left-40 size-[500px] rounded-full bg-cyan-500/15 blur-3xl" />
+                    <div className="pointer-events-none absolute top-10 right-0 size-[450px] rounded-full bg-purple-600/15 blur-3xl" />
+                    <div className="pointer-events-none absolute bottom-0 left-1/3 size-[400px] rounded-full bg-blue-600/10 blur-3xl" />
+
+                    <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-start">
+                            {/* Left Column: Clinic Presentation & Hero Imagery */}
+                            <div className="lg:col-span-6 flex flex-col gap-6 text-left">
+                                <div className="inline-flex items-center">
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3.5 py-1.5 text-xs font-medium font-sans text-cyan-400 shadow-inner backdrop-blur-md">
+                                        <SparklesIcon className="size-3.5 text-cyan-400" />
+                                        <span>
+                                            Next-Gen Smart Tech Healthcare
+                                        </span>
+                                        <span className="text-slate-400">
+                                            •
+                                        </span>
+                                        <span className="text-white">
+                                            Same-Day Slots
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium font-sans tracking-tight text-foreground leading-[1.1]">
-                                    World-class clinical care, personalized for
-                                    you.
+                                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold font-sans tracking-tight text-white leading-[1.12]">
+                                    World-Class Clinical Care,{" "}
+                                    <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                                        Personalized For You.
+                                    </span>
                                 </h1>
 
-                                <p className="text-base sm:text-lg font-sans tracking-tight text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0">
-                                    Book an appointment with board-certified
-                                    physicians, dentists, and surgeons.
-                                    Experience modern diagnostics, zero waiting
-                                    times, and compassionate healthcare.
+                                <p className="text-sm sm:text-base font-normal text-slate-300 leading-relaxed max-w-xl">
+                                    Experience healthcare engineered for the
+                                    modern patient. Board-certified physicians,
+                                    AI-assisted diagnostics, 1-click Google &
+                                    Apple calendar integration, and a strict
+                                    zero-waiting-time commitment.
                                 </p>
 
-                                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
-                                    <Button
-                                        size="lg"
-                                        className="bg-primary text-primary-foreground h-12 px-6 text-sm font-semibold shadow-md"
-                                        render={<a href="#booking" />}
-                                    >
-                                        <CalendarIcon className="size-4 mr-2" />
-                                        Schedule Consultation
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="lg"
-                                        className="h-12 px-6 text-sm"
-                                        render={<a href="#services" />}
-                                    >
-                                        Explore Procedures
-                                    </Button>
-                                </div>
-
-                                {/* Trust stats */}
-                                <div className="grid grid-cols-3 gap-4 pt-6 border-t max-w-lg mx-auto lg:mx-0 text-left">
+                                {/* Trust Metrics Bar */}
+                                <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-800/80 max-w-lg">
                                     <div>
-                                        <div className="text-2xl font-bold text-foreground tabular-nums">
+                                        <div className="text-2xl font-black text-white tabular-nums">
                                             4.9/5
                                         </div>
-                                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                            <StarIcon className="size-3 fill-amber-400 text-amber-400" />
-                                            1,200+ Reviews
+                                        <div className="text-[11px] text-cyan-300/90 flex items-center gap-1 mt-0.5 font-medium">
+                                            <StarIcon className="size-3 fill-cyan-400 text-cyan-400" />
+                                            2,400+ Reviews
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="text-2xl font-bold text-foreground tabular-nums">
+                                    <div className="border-l border-slate-800/80 pl-3">
+                                        <div className="text-2xl font-black text-white tabular-nums">
                                             15+
                                         </div>
-                                        <div className="text-xs text-muted-foreground mt-0.5">
-                                            Medical Specialists
+                                        <div className="text-[11px] text-slate-300 mt-0.5 font-medium">
+                                            Top Specialists
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="text-2xl font-bold text-foreground tabular-nums">
-                                            100%
+                                    <div className="border-l border-slate-800/80 pl-3">
+                                        <div className="text-2xl font-black text-white tabular-nums">
+                                            0 Mins
                                         </div>
-                                        <div className="text-xs text-muted-foreground mt-0.5">
-                                            Confidential Care
+                                        <div className="text-[11px] text-emerald-400 mt-0.5 font-medium">
+                                            Wait Guarantee
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* HERO CLINIC IMAGERY SHOWCASE */}
+                                <div className="pt-2">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                            <Building2Icon className="size-3.5 text-cyan-400" />
+                                            Inside Our Clinic Facility
+                                        </span>
+                                        <span className="text-[11px] text-cyan-400 font-medium">
+                                            Suite 400 • Medical Tower
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {/* Image 1: Main Doctor Consultation */}
+                                        <div className="group relative overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 shadow-md col-span-2 sm:col-span-2 aspect-16/9">
+                                            <img
+                                                src="/images/clinic/doctor-consultation.jpg"
+                                                alt="Doctor consultation at Smart Tech Clinic"
+                                                className="size-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
+                                            <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-xs font-bold text-white">
+                                                        Specialist Consultations
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-300">
+                                                        Direct 1-on-1
+                                                        personalized time
+                                                    </p>
+                                                </div>
+                                                <Badge className="bg-cyan-500/90 text-white text-[9px] border-0">
+                                                    Board Certified
+                                                </Badge>
+                                            </div>
+                                        </div>
+
+                                        {/* Image 2: Modern Clinic Facility */}
+                                        <div className="group relative overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 shadow-md aspect-16/9 sm:aspect-auto">
+                                            <img
+                                                src="/images/clinic/modern-facility.jpg"
+                                                alt="Smart Tech Clinic modern reception"
+                                                className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
+                                            <div className="absolute bottom-2 left-2 right-2">
+                                                <p className="text-[11px] font-bold text-white leading-tight">
+                                                    Executive Lounge
+                                                </p>
+                                                <p className="text-[9px] text-slate-300">
+                                                    Zero waiting area
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Image 3: Examination & Patient Care */}
+                                        <div className="group relative overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 shadow-md aspect-16/9 sm:aspect-auto">
+                                            <img
+                                                src="/images/clinic/patient-care.jpg"
+                                                alt="Patient care examination suite"
+                                                className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
+                                            <div className="absolute bottom-2 left-2 right-2">
+                                                <p className="text-[11px] font-bold text-white leading-tight">
+                                                    Care Suites
+                                                </p>
+                                                <p className="text-[9px] text-slate-300">
+                                                    Private & sanitized
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Image 4: Diagnostic Suite */}
+                                        <div className="group relative overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 shadow-md col-span-2 sm:col-span-2 aspect-16/9">
+                                            <img
+                                                src="/images/clinic/diagnostic-suite.jpg"
+                                                alt="Smart Tech diagnostic lab"
+                                                className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
+                                            <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-xs font-bold text-white">
+                                                        Diagnostic & Imaging Lab
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-300">
+                                                        Same-day digital results
+                                                    </p>
+                                                </div>
+                                                <span className="text-[10px] text-cyan-400 font-semibold flex items-center gap-1">
+                                                    <CpuIcon className="size-3" />{" "}
+                                                    AI Assisted
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Right: Interactive Booking Form */}
-                            <div className="lg:col-span-6" id="booking">
-                                <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-xl relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-primary via-indigo-500 to-purple-500" />
+                            {/* Right Column: High-Converting Interactive Appointment Booking Form */}
+                            <div className="lg:col-span-6 w-full" id="booking">
+                                <div className="rounded-2xl border border-cyan-500/30 bg-card p-6 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+                                    {/* Luminous Logo Accent Top Bar */}
+                                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600" />
 
                                     {formSubmitted ? (
                                         <div className="flex flex-col items-center text-center py-8 gap-4">
-                                            <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                                            <div className="flex size-16 items-center justify-center rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/30 animate-in zoom-in-75 duration-300">
                                                 <CheckCircle2Icon className="size-8" />
                                             </div>
                                             <div>
@@ -739,17 +818,18 @@ export default function Welcome({
                                                     <span className="font-medium text-foreground">
                                                         {bookingData.service}
                                                     </span>{" "}
-                                                    has been received.
+                                                    has been received by the
+                                                    Smart Tech clinical staff.
                                                 </p>
                                             </div>
 
                                             <div className="w-full rounded-xl bg-muted/50 p-4 border text-left text-xs space-y-2 mt-2">
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">
-                                                        Confirmation Reference:
+                                                        Reference Code:
                                                     </span>
-                                                    <span className="font-mono font-bold text-foreground">
-                                                        MED-
+                                                    <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">
+                                                        STC-
                                                         {Math.floor(
                                                             1000 +
                                                                 Math.random() *
@@ -759,64 +839,68 @@ export default function Welcome({
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">
-                                                        Specialist:
+                                                        Assigned Specialist:
                                                     </span>
-                                                    <span className="font-medium text-foreground">
+                                                    <span className="font-semibold text-foreground">
                                                         {bookingData.doctor}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">
-                                                        Preferred Date & Slot:
+                                                        Date & Time:
                                                     </span>
-                                                    <span className="font-medium text-foreground">
-                                                        {bookingData.date} (
-                                                        {bookingData.timeSlot})
+                                                    <span className="font-semibold text-foreground">
+                                                        {bookingData.date} at{" "}
+                                                        {bookingData.timeSlot}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">
-                                                        Contact Phone:
+                                                        Confirmation Email:
                                                     </span>
-                                                    <span className="font-medium text-foreground">
-                                                        {bookingData.phone}
+                                                    <span className="font-semibold text-foreground">
+                                                        {bookingData.email}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <p className="text-xs text-muted-foreground">
-                                                Our patient coordinator will
-                                                contact you shortly to confirm
-                                                your arrival window and health
-                                                questionnaire.
-                                            </p>
+                                            <div className="rounded-lg bg-cyan-500/10 border border-cyan-500/20 p-3 text-left text-xs text-cyan-700 dark:text-cyan-300 w-full flex items-start gap-2.5">
+                                                <CalendarIcon className="size-4 shrink-0 mt-0.5 text-cyan-500" />
+                                                <span>
+                                                    <strong>
+                                                        Automated Calendar Sync:
+                                                    </strong>{" "}
+                                                    Once verified by clinic
+                                                    reception on our dashboard,
+                                                    an email with 1-click Google
+                                                    Calendar & Apple Calendar
+                                                    (.ics) invites will be sent
+                                                    directly to{" "}
+                                                    <strong>
+                                                        {bookingData.email}
+                                                    </strong>
+                                                    .
+                                                </span>
+                                            </div>
 
                                             <div className="w-full pt-2">
                                                 <Button
-                                                    className="w-full bg-primary text-primary-foreground font-semibold h-10 shadow-xs"
+                                                    variant="outline"
                                                     onClick={() => {
                                                         setFormSubmitted(false);
-                                                        setBookingData({
-                                                            patientName: "",
-                                                            email: "",
-                                                            phone: "",
-                                                            service:
-                                                                doctorList[0]?.specialty ||
-                                                                "Dental Implants & Cosmetic",
-                                                            doctor:
-                                                                doctorList[0]?.name ||
-                                                                "Dr. Eddie Lake",
-                                                            date: getLocalDateString(
-                                                                0,
-                                                            ),
-                                                            timeSlot:
-                                                                "09:00 AM",
-                                                            notes: "",
-                                                        });
+                                                        setBookingData(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                patientName: "",
+                                                                phone: "",
+                                                                email: "",
+                                                                notes: "",
+                                                            }),
+                                                        );
                                                     }}
+                                                    className="w-full text-xs"
                                                 >
-                                                    <CalendarIcon className="size-4 mr-2" />
-                                                    Book Another Appointment
+                                                    Book Another Consultation
                                                 </Button>
                                             </div>
                                         </div>
@@ -825,32 +909,39 @@ export default function Welcome({
                                             onSubmit={handleSubmit}
                                             className="flex flex-col gap-4"
                                         >
-                                            <div className="flex flex-col gap-1 border-b pb-4">
-                                                <div className="flex items-center gap-2">
-                                                    <CalendarIcon className="size-5 text-primary" />
-                                                    <h2 className="text-xl font-bold tracking-tight text-foreground">
-                                                        Book Your Appointment
-                                                    </h2>
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <CalendarIcon className="size-5 text-cyan-500" />
+                                                        <h2 className="text-lg font-bold text-foreground">
+                                                            Book Your
+                                                            Appointment
+                                                        </h2>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                        Select your treatment,
+                                                        preferred specialist,
+                                                        and consultation slot.
+                                                    </p>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Select your treatment,
-                                                    preferred specialist, and
-                                                    consultation time.
-                                                </p>
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-cyan-500 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
+                                                    <ClockIcon className="size-3" />{" "}
+                                                    Real-Time
+                                                </span>
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1.5">
                                                     <Label
                                                         htmlFor="patientName"
-                                                        className="text-xs font-medium"
+                                                        className="text-xs font-semibold"
                                                     >
                                                         Full Name *
                                                     </Label>
                                                     <Input
                                                         id="patientName"
-                                                        placeholder="e.g. Sarah Connor"
                                                         required
+                                                        placeholder="e.g. Sarah Connor"
                                                         value={
                                                             bookingData.patientName
                                                         }
@@ -862,22 +953,22 @@ export default function Welcome({
                                                                         .value,
                                                             })
                                                         }
-                                                        className="text-xs h-9"
+                                                        className="text-xs h-9 focus-visible:ring-cyan-500"
                                                     />
                                                 </div>
 
                                                 <div className="flex flex-col gap-1.5">
                                                     <Label
                                                         htmlFor="phone"
-                                                        className="text-xs font-medium"
+                                                        className="text-xs font-semibold"
                                                     >
                                                         Phone Number *
                                                     </Label>
                                                     <Input
                                                         id="phone"
                                                         type="tel"
-                                                        placeholder="+1 (555) 000-0000"
                                                         required
+                                                        placeholder="+1 (555) 000-0000"
                                                         value={
                                                             bookingData.phone
                                                         }
@@ -888,7 +979,7 @@ export default function Welcome({
                                                                     .value,
                                                             })
                                                         }
-                                                        className="text-xs h-9"
+                                                        className="text-xs h-9 focus-visible:ring-cyan-500"
                                                     />
                                                 </div>
                                             </div>
@@ -896,13 +987,18 @@ export default function Welcome({
                                             <div className="flex flex-col gap-1.5">
                                                 <Label
                                                     htmlFor="email"
-                                                    className="text-xs font-medium"
+                                                    className="text-xs font-semibold flex items-center justify-between"
                                                 >
-                                                    Email Address (Optional)
+                                                    <span>Email Address *</span>
+                                                    <span className="text-[10px] font-normal text-cyan-600 dark:text-cyan-400">
+                                                        For Google & Apple
+                                                        calendar invite
+                                                    </span>
                                                 </Label>
                                                 <Input
                                                     id="email"
                                                     type="email"
+                                                    required
                                                     placeholder="sarah@example.com"
                                                     value={bookingData.email}
                                                     onChange={(e) =>
@@ -912,13 +1008,13 @@ export default function Welcome({
                                                                 .value,
                                                         })
                                                     }
-                                                    className="text-xs h-9"
+                                                    className="text-xs h-9 focus-visible:ring-cyan-500"
                                                 />
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1.5">
-                                                    <Label className="text-xs font-medium">
+                                                    <Label className="text-xs font-semibold">
                                                         Medical Department /
                                                         Service *
                                                     </Label>
@@ -930,41 +1026,29 @@ export default function Welcome({
                                                             val,
                                                         ) => {
                                                             if (val) {
-                                                                const s =
-                                                                    dynamicServices.find(
-                                                                        (
-                                                                            item,
-                                                                        ) =>
-                                                                            item.title ===
-                                                                            val,
-                                                                    );
-                                                                const matchedDoc =
+                                                                const matchingDoctor =
                                                                     doctorList.find(
-                                                                        (
-                                                                            d,
-                                                                        ) =>
-                                                                            d.specialty?.toLowerCase() ===
-                                                                            val.toLowerCase(),
+                                                                        (d) =>
+                                                                            d.specialty ===
+                                                                            val,
                                                                     );
                                                                 setBookingData({
                                                                     ...bookingData,
                                                                     service:
                                                                         val,
-                                                                    doctor: matchedDoc
-                                                                        ? matchedDoc.name
-                                                                        : s
-                                                                          ? s.doctor
-                                                                          : bookingData.doctor,
+                                                                    doctor: matchingDoctor
+                                                                        ? matchingDoctor.name
+                                                                        : bookingData.doctor,
                                                                 });
                                                             }
                                                         }}
                                                     >
                                                         <SelectTrigger className="w-full text-xs h-9">
-                                                            <SelectValue placeholder="Select procedure" />
+                                                            <SelectValue placeholder="Select clinical department" />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectGroup>
-                                                                {dynamicServices.map(
+                                                                {SERVICES.map(
                                                                     (s) => (
                                                                         <SelectItem
                                                                             key={
@@ -980,14 +1064,43 @@ export default function Welcome({
                                                                         </SelectItem>
                                                                     ),
                                                                 )}
+                                                                {doctorList.map(
+                                                                    (d) => {
+                                                                        if (
+                                                                            !d.specialty ||
+                                                                            SERVICES.some(
+                                                                                (
+                                                                                    s,
+                                                                                ) =>
+                                                                                    s.title ===
+                                                                                    d.specialty,
+                                                                            )
+                                                                        )
+                                                                            return null;
+                                                                        return (
+                                                                            <SelectItem
+                                                                                key={
+                                                                                    d.specialty
+                                                                                }
+                                                                                value={
+                                                                                    d.specialty
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    d.specialty
+                                                                                }
+                                                                            </SelectItem>
+                                                                        );
+                                                                    },
+                                                                )}
                                                             </SelectGroup>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
 
                                                 <div className="flex flex-col gap-1.5">
-                                                    <Label className="text-xs font-medium">
-                                                        Specialist / Doctor
+                                                    <Label className="text-xs font-semibold">
+                                                        Specialist / Doctor *
                                                     </Label>
                                                     <Select
                                                         value={
@@ -997,11 +1110,9 @@ export default function Welcome({
                                                             val,
                                                         ) => {
                                                             if (val) {
-                                                                const matchedDoc =
+                                                                const chosenDoctor =
                                                                     doctorList.find(
-                                                                        (
-                                                                            d,
-                                                                        ) =>
+                                                                        (d) =>
                                                                             d.name ===
                                                                             val,
                                                                     );
@@ -1009,14 +1120,14 @@ export default function Welcome({
                                                                     ...bookingData,
                                                                     doctor: val,
                                                                     service:
-                                                                        matchedDoc?.specialty ||
+                                                                        chosenDoctor?.specialty ||
                                                                         bookingData.service,
                                                                 });
                                                             }
                                                         }}
                                                     >
                                                         <SelectTrigger className="w-full text-xs h-9">
-                                                            <SelectValue placeholder="Assigned Doctor" />
+                                                            <SelectValue placeholder="Select specialist" />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectGroup>
@@ -1024,7 +1135,6 @@ export default function Welcome({
                                                                     (doc) => (
                                                                         <SelectItem
                                                                             key={
-                                                                                doc.id ||
                                                                                 doc.name
                                                                             }
                                                                             value={
@@ -1034,9 +1144,10 @@ export default function Welcome({
                                                                             {
                                                                                 doc.name
                                                                             }{" "}
-                                                                            {doc.specialty
-                                                                                ? `(${doc.specialty})`
-                                                                                : ""}
+                                                                            (
+                                                                            {doc.specialty ||
+                                                                                "Specialist"}
+                                                                            )
                                                                         </SelectItem>
                                                                     ),
                                                                 )}
@@ -1051,23 +1162,61 @@ export default function Welcome({
                                                     <div className="flex items-center justify-between">
                                                         <Label
                                                             htmlFor="date"
-                                                            className="text-xs font-medium"
+                                                            className="text-xs font-semibold"
                                                         >
                                                             Preferred Date *
                                                         </Label>
-                                                        <span className="text-[10px] text-muted-foreground font-medium">
-                                                            {bookingData.date ===
-                                                            getLocalDateString(
-                                                                0,
-                                                            )
-                                                                ? "Today"
-                                                                : bookingData.date ===
-                                                                    getLocalDateString(
-                                                                        1,
+                                                        <div className="flex items-center gap-1.5 text-[10px]">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setBookingData(
+                                                                        {
+                                                                            ...bookingData,
+                                                                            date: getLocalDateString(
+                                                                                0,
+                                                                            ),
+                                                                        },
                                                                     )
-                                                                  ? "Tomorrow"
-                                                                  : ""}
-                                                        </span>
+                                                                }
+                                                                className={cn(
+                                                                    "px-1.5 py-0.5 rounded transition-colors cursor-pointer",
+                                                                    bookingData.date ===
+                                                                        getLocalDateString(
+                                                                            0,
+                                                                        )
+                                                                        ? "bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-bold"
+                                                                        : "text-muted-foreground hover:text-foreground",
+                                                                )}
+                                                            >
+                                                                Today
+                                                            </button>
+                                                            <span>•</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setBookingData(
+                                                                        {
+                                                                            ...bookingData,
+                                                                            date: getLocalDateString(
+                                                                                1,
+                                                                            ),
+                                                                        },
+                                                                    )
+                                                                }
+                                                                className={cn(
+                                                                    "px-1.5 py-0.5 rounded transition-colors cursor-pointer",
+                                                                    bookingData.date ===
+                                                                        getLocalDateString(
+                                                                            1,
+                                                                        )
+                                                                        ? "bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-bold"
+                                                                        : "text-muted-foreground hover:text-foreground",
+                                                                )}
+                                                            >
+                                                                Tomorrow
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     <Input
                                                         id="date"
@@ -1084,12 +1233,12 @@ export default function Welcome({
                                                                     .value,
                                                             })
                                                         }
-                                                        className="text-xs h-9"
+                                                        className="text-xs h-9 focus-visible:ring-cyan-500"
                                                     />
                                                 </div>
 
                                                 <div className="flex flex-col gap-1.5">
-                                                    <Label className="text-xs font-medium">
+                                                    <Label className="text-xs font-semibold">
                                                         Time Window Dropdown
                                                     </Label>
                                                     <Select
@@ -1164,11 +1313,12 @@ export default function Welcome({
                                                                                 {
                                                                                     s.period
                                                                                 }
+
                                                                                 )
                                                                                 {isPast
-                                                                                    ? " — Passed (Unavailable)"
+                                                                                    ? " — Passed"
                                                                                     : booked.isBooked
-                                                                                      ? " — Confirmed (Unavailable)"
+                                                                                      ? " — Confirmed"
                                                                                       : " — Available"}
                                                                             </SelectItem>
                                                                         );
@@ -1181,20 +1331,21 @@ export default function Welcome({
                                             </div>
 
                                             {/* Visual Consultation Slots Picker */}
-                                            <div className="flex flex-col gap-2 rounded-xl border bg-muted/20 p-3.5">
+                                            <div className="flex flex-col gap-2 rounded-xl border border-border/80 bg-muted/20 p-3.5">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-1.5">
-                                                        <ClockIcon className="size-3.5 text-primary" />
-                                                        <span className="text-xs font-semibold text-foreground">
+                                                        <ClockIcon className="size-3.5 text-cyan-500" />
+                                                        <span className="text-xs font-bold text-foreground">
                                                             Available Slots for{" "}
-                                                            {
-                                                                bookingData.doctor.replace(/^Dr\.?\s+/i, "") ||
-                                                                bookingData.doctor
-                                                            }
+                                                            {bookingData.doctor.replace(
+                                                                /^Dr\.?\s+/i,
+                                                                "",
+                                                            ) ||
+                                                                bookingData.doctor}
                                                         </span>
                                                     </div>
                                                     <span className="text-[11px] text-muted-foreground">
-                                                        <span className="font-semibold text-foreground">
+                                                        <span className="font-bold text-cyan-600 dark:text-cyan-400">
                                                             {
                                                                 ALL_TIME_SLOTS.filter(
                                                                     (s) =>
@@ -1206,7 +1357,8 @@ export default function Welcome({
                                                                             s.time,
                                                                             bookingData.doctor,
                                                                             bookingData.date,
-                                                                        ).isBooked,
+                                                                        )
+                                                                            .isBooked,
                                                                 ).length
                                                             }
                                                         </span>{" "}
@@ -1245,12 +1397,12 @@ export default function Welcome({
                                                                         className="relative flex flex-col items-center justify-center p-2 rounded-lg border border-dashed border-border/60 bg-muted/20 text-muted-foreground/40 cursor-not-allowed select-none"
                                                                         title={`${slot.time} has already passed for today`}
                                                                     >
-                                                                        <span className="text-xs font-medium line-through decoration-muted-foreground/40">
+                                                                        <span className="text-xs font-medium line-through">
                                                                             {
                                                                                 slot.time
                                                                             }
                                                                         </span>
-                                                                        <span className="text-[9px] font-semibold tracking-tight text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+                                                                        <span className="text-[9px] font-semibold text-muted-foreground/60 mt-0.5">
                                                                             Passed
                                                                         </span>
                                                                     </div>
@@ -1264,15 +1416,15 @@ export default function Welcome({
                                                                             slot.time
                                                                         }
                                                                         className="relative flex flex-col items-center justify-center p-2 rounded-lg border border-dashed border-border/80 bg-muted/40 text-muted-foreground/60 cursor-not-allowed select-none"
-                                                                        title={`${slot.time} is already confirmed for ${bookingData.doctor}`}
+                                                                        title={`${slot.time} is already booked`}
                                                                     >
-                                                                        <span className="text-xs font-medium line-through decoration-muted-foreground/60">
+                                                                        <span className="text-xs font-medium line-through">
                                                                             {
                                                                                 slot.time
                                                                             }
                                                                         </span>
-                                                                        <span className="text-[9px] font-semibold tracking-tight text-rose-500/80 dark:text-rose-400 mt-0.5 flex items-center gap-1">
-                                                                            <span className="size-1 rounded-full bg-rose-500" />
+                                                                        <span className="text-[9px] font-semibold text-rose-500 mt-0.5 flex items-center gap-1">
+                                                                            <span className="size-1 rounded-full bg-rose-500" />{" "}
                                                                             Booked
                                                                         </span>
                                                                     </div>
@@ -1297,21 +1449,21 @@ export default function Welcome({
                                                                     className={cn(
                                                                         "relative flex flex-col items-center justify-center p-2 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:scale-[1.02]",
                                                                         isSelected
-                                                                            ? "bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/20"
-                                                                            : "bg-background hover:bg-muted/50 hover:border-primary/40 text-foreground",
+                                                                            ? "bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white border-transparent shadow-md shadow-cyan-500/25 ring-2 ring-cyan-400/40"
+                                                                            : "bg-background hover:bg-muted/50 hover:border-cyan-500/40 text-foreground",
                                                                     )}
                                                                 >
-                                                                    <span className="text-xs font-semibold">
+                                                                    <span className="text-xs font-bold">
                                                                         {
                                                                             slot.time
                                                                         }
                                                                     </span>
                                                                     <span
                                                                         className={cn(
-                                                                            "text-[9px] tracking-tight font-normal mt-0.5 flex items-center gap-1",
+                                                                            "text-[9px] tracking-tight mt-0.5 flex items-center gap-1",
                                                                             isSelected
-                                                                                ? "text-primary-foreground/90 font-medium"
-                                                                                : "text-emerald-600 dark:text-emerald-400",
+                                                                                ? "text-white font-medium"
+                                                                                : "text-cyan-600 dark:text-cyan-400 font-medium",
                                                                         )}
                                                                     >
                                                                         <span
@@ -1319,7 +1471,7 @@ export default function Welcome({
                                                                                 "size-1 rounded-full",
                                                                                 isSelected
                                                                                     ? "bg-white"
-                                                                                    : "bg-emerald-500",
+                                                                                    : "bg-cyan-500",
                                                                             )}
                                                                         />
                                                                         Available
@@ -1332,7 +1484,7 @@ export default function Welcome({
 
                                                 <div className="flex flex-wrap items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 gap-2">
                                                     <span className="flex items-center gap-1.5">
-                                                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                                                        <span className="size-1.5 rounded-full bg-cyan-500" />
                                                         Available for booking
                                                     </span>
                                                     <span className="flex items-center gap-1.5">
@@ -1349,7 +1501,7 @@ export default function Welcome({
                                             <div className="flex flex-col gap-1.5">
                                                 <Label
                                                     htmlFor="notes"
-                                                    className="text-xs font-medium"
+                                                    className="text-xs font-semibold"
                                                 >
                                                     Reason for Visit / Symptoms
                                                     (Optional)
@@ -1365,28 +1517,148 @@ export default function Welcome({
                                                                 .value,
                                                         })
                                                     }
-                                                    className="text-xs h-9"
+                                                    className="text-xs h-9 focus-visible:ring-cyan-500"
                                                 />
                                             </div>
 
                                             <Button
                                                 type="submit"
                                                 size="lg"
-                                                className="w-full bg-primary text-primary-foreground font-semibold mt-2 h-11"
+                                                className="w-full bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:via-blue-500 hover:to-purple-500 text-white font-bold h-12 shadow-lg shadow-cyan-500/25 border-0 text-sm mt-1 cursor-pointer transition-all hover:scale-[1.005]"
                                             >
+                                                <CalendarIcon className="size-4 mr-2" />
                                                 Confirm Appointment Booking
                                             </Button>
 
-                                            <p className="text-[11px] text-center text-muted-foreground">
-                                                No upfront payment required.
-                                                100% confidential. You can
-                                                cancel or reschedule at any
-                                                time.
-                                            </p>
+                                            <div className="flex items-center justify-center gap-3 text-[11px] text-muted-foreground pt-1">
+                                                <span className="flex items-center gap-1">
+                                                    <ShieldCheckIcon className="size-3 text-cyan-500" />{" "}
+                                                    100% Confidential
+                                                </span>
+                                                <span>•</span>
+                                                <span>
+                                                    No prepayment needed
+                                                </span>
+                                                <span>•</span>
+                                                <span>Free rescheduling</span>
+                                            </div>
                                         </form>
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Trust & Quality Accreditations Bar */}
+                <section className="border-b bg-muted/40 py-6">
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                            <div className="flex flex-col items-center justify-center gap-1">
+                                <AwardIcon className="size-6 text-cyan-500" />
+                                <span className="font-bold text-sm text-foreground">
+                                    JCI Accredited Facility
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    International gold standard in healthcare
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                                <ShieldCheckIcon className="size-6 text-blue-500" />
+                                <span className="font-bold text-sm text-foreground">
+                                    HIPAA & GDPR Compliant
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    Military-grade health record encryption
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                                <ClockIcon className="size-6 text-purple-500" />
+                                <span className="font-bold text-sm text-foreground">
+                                    Zero-Waiting Guarantee
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    Average wait time under 4 minutes
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                                <StarIcon className="size-6 text-amber-500 fill-amber-500" />
+                                <span className="font-bold text-sm text-foreground">
+                                    4.9 Star Patient Score
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    Over 2,400 verified patient reviews
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* CLINIC FACILITIES & TECH GALLERY SHOWCASE */}
+                <section
+                    id="facilities"
+                    className="py-16 md:py-24 border-b bg-background"
+                >
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div className="text-center max-w-2xl mx-auto mb-14">
+                            <Badge
+                                variant="outline"
+                                className="mb-2 text-xs border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
+                            >
+                                Clinical Excellence
+                            </Badge>
+                            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                                State-of-the-Art Medical Facilities
+                            </h2>
+                            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                                Our clinic is built from the ground up for
+                                diagnostic accuracy, safety, and tranquil
+                                patient recovery.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {CLINIC_FACILITIES.map((facility) => (
+                                <div
+                                    key={facility.title}
+                                    className="group overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm hover:shadow-xl hover:border-cyan-500/40 transition-all flex flex-col"
+                                >
+                                    <div className="relative aspect-4/3 overflow-hidden bg-slate-900">
+                                        <img
+                                            src={facility.image}
+                                            alt={facility.title}
+                                            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        />
+                                        <div className="absolute top-3 left-3">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10">
+                                                {facility.category}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="p-5 flex flex-col flex-1 justify-between">
+                                        <div>
+                                            <h3 className="font-bold text-base text-foreground group-hover:text-cyan-500 transition-colors">
+                                                {facility.title}
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                                                {facility.description}
+                                            </p>
+                                        </div>
+                                        <div className="pt-4 border-t border-border/50 mt-4 flex items-center justify-between text-xs">
+                                            <span className="text-cyan-600 dark:text-cyan-400 font-semibold">
+                                                Sanitized Medical Suite
+                                            </span>
+                                            <a
+                                                href="#booking"
+                                                className="text-muted-foreground hover:text-foreground font-medium flex items-center gap-1"
+                                            >
+                                                Book Tour{" "}
+                                                <ArrowRightIcon className="size-3" />
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>
@@ -1398,15 +1670,18 @@ export default function Welcome({
                 >
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div className="text-center max-w-2xl mx-auto mb-12">
-                            <Badge variant="outline" className="mb-2 text-xs">
-                                Specialities
+                            <Badge
+                                variant="outline"
+                                className="mb-2 text-xs border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                            >
+                                Specialties & Care
                             </Badge>
                             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                                 Comprehensive Healthcare Services
                             </h2>
                             <p className="mt-3 text-sm text-muted-foreground">
                                 From routine preventive checkups to complex
-                                specialized surgeries, our clinical departments
+                                specialized interventions, our departments
                                 provide exceptional patient care.
                             </p>
                         </div>
@@ -1417,37 +1692,37 @@ export default function Welcome({
                                 return (
                                     <Card
                                         key={service.title}
-                                        className="hover:shadow-md transition-shadow group/service bg-card"
+                                        className="hover:shadow-lg transition-all group/service bg-card border-border/80 hover:border-cyan-500/40"
                                     >
                                         <CardHeader>
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
                                                     <Icon className="size-5" />
                                                 </div>
                                                 <Badge
                                                     variant="secondary"
-                                                    className="text-[10px]"
+                                                    className="text-[10px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20"
                                                 >
                                                     {service.badge}
                                                 </Badge>
                                             </div>
-                                            <CardTitle className="text-base font-semibold group-hover/service:text-primary transition-colors">
+                                            <CardTitle className="text-base font-bold group-hover/service:text-cyan-500 transition-colors">
                                                 {service.title}
                                             </CardTitle>
-                                            <CardDescription className="text-xs text-muted-foreground mt-1">
+                                            <CardDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
                                                 {service.description}
                                             </CardDescription>
                                         </CardHeader>
-                                        <div className="px-4 pb-4 pt-0 text-xs flex items-center justify-between border-t mt-3 pt-3">
+                                        <div className="px-6 pb-5 pt-0 text-xs flex items-center justify-between border-t border-border/50 mt-2 pt-3.5">
                                             <span className="text-muted-foreground">
-                                                Lead:{" "}
-                                                <span className="font-medium text-foreground">
+                                                Department Lead:{" "}
+                                                <span className="font-semibold text-foreground">
                                                     {service.doctor}
                                                 </span>
                                             </span>
                                             <a
                                                 href="#booking"
-                                                className="text-primary font-medium hover:underline flex items-center gap-1"
+                                                className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline flex items-center gap-1"
                                                 onClick={() => {
                                                     setBookingData((prev) => ({
                                                         ...prev,
@@ -1468,14 +1743,20 @@ export default function Welcome({
                 </section>
 
                 {/* Specialists Section */}
-                <section id="specialists" className="py-16 md:py-24 border-b">
+                <section
+                    id="specialists"
+                    className="py-16 md:py-24 border-b bg-background"
+                >
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div className="text-center max-w-2xl mx-auto mb-12">
-                            <Badge variant="outline" className="mb-2 text-xs">
-                                Our Team
+                            <Badge
+                                variant="outline"
+                                className="mb-2 text-xs border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                            >
+                                Medical Directors
                             </Badge>
                             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                                Meet Our Medical Directors
+                                Meet Our Board-Certified Specialists
                             </h2>
                             <p className="mt-3 text-sm text-muted-foreground">
                                 Renowned physicians and board-certified
@@ -1485,25 +1766,31 @@ export default function Welcome({
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {doctorList.map((doc) => {
+                            {doctorList.map((doc, idx) => {
                                 const initials = getDoctorInitials(doc.name);
                                 const displayName = doc.name;
-                                const cleanName = displayName.replace(/^Dr\.?\s+/i, "");
-                                const firstName = cleanName.split(" ")[0] || displayName;
+                                const cleanName = displayName.replace(
+                                    /^Dr\.?\s+/i,
+                                    "",
+                                );
+                                const firstName =
+                                    cleanName.split(" ")[0] || displayName;
 
                                 return (
                                     <div
                                         key={doc.id || doc.name}
-                                        className="flex flex-col items-center text-center p-6 rounded-xl border bg-card shadow-xs hover:border-primary/40 transition-colors"
+                                        className="flex flex-col items-center text-center p-6 rounded-2xl border border-border/80 bg-card shadow-sm hover:border-cyan-500/40 hover:shadow-lg transition-all"
                                     >
-                                        <div className="size-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold mb-4">
+                                        <div className="relative size-20 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-600 to-purple-600 text-white flex items-center justify-center text-xl font-bold mb-4 shadow-md shadow-cyan-500/20">
                                             {initials}
+                                            <span className="absolute bottom-0 right-0 size-4 rounded-full bg-emerald-500 border-2 border-background" />
                                         </div>
-                                        <h3 className="font-semibold text-base text-foreground">
+                                        <h3 className="font-bold text-base text-foreground">
                                             {displayName}
                                         </h3>
-                                        <p className="text-xs text-primary font-medium mt-1">
-                                            {doc.specialty || "Clinic Specialist"}
+                                        <p className="text-xs text-cyan-600 dark:text-cyan-400 font-semibold mt-1">
+                                            {doc.specialty ||
+                                                "Clinic Specialist"}
                                         </p>
                                         <span className="text-[11px] text-muted-foreground mt-2">
                                             {doc.room
@@ -1513,13 +1800,15 @@ export default function Welcome({
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="mt-4 text-xs w-full cursor-pointer"
+                                            className="mt-5 text-xs w-full cursor-pointer hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-400"
                                             render={<a href="#booking" />}
                                             onClick={() => {
                                                 setBookingData((prev) => ({
                                                     ...prev,
                                                     doctor: doc.name,
-                                                    service: doc.specialty || prev.service,
+                                                    service:
+                                                        doc.specialty ||
+                                                        prev.service,
                                                 }));
                                             }}
                                         >
@@ -1532,37 +1821,99 @@ export default function Welcome({
                     </div>
                 </section>
 
+                {/* Patient Testimonials & Social Proof */}
+                <section
+                    id="reviews"
+                    className="py-16 md:py-24 border-b bg-muted/30"
+                >
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                        <div className="text-center max-w-2xl mx-auto mb-12">
+                            <Badge
+                                variant="outline"
+                                className="mb-2 text-xs border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            >
+                                Patient Stories
+                            </Badge>
+                            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                                Rated 4.9/5 by Over 2,400 Patients
+                            </h2>
+                            <p className="mt-3 text-sm text-muted-foreground">
+                                Real experiences from patients who trust Smart
+                                Tech Medical Clinic for their consultations.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {TESTIMONIALS.map((t) => (
+                                <Card
+                                    key={t.name}
+                                    className="p-6 bg-card border-border/80 shadow-sm flex flex-col justify-between"
+                                >
+                                    <div>
+                                        <div className="flex items-center gap-1 mb-3">
+                                            {[...Array(t.rating)].map(
+                                                (_, i) => (
+                                                    <StarIcon
+                                                        key={i}
+                                                        className="size-4 fill-amber-400 text-amber-400"
+                                                    />
+                                                ),
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-foreground/90 italic leading-relaxed">
+                                            &ldquo;{t.text}&rdquo;
+                                        </p>
+                                    </div>
+                                    <div className="pt-4 border-t border-border/60 mt-4 flex items-center justify-between text-xs">
+                                        <div>
+                                            <p className="font-bold text-foreground">
+                                                {t.name}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground">
+                                                {t.service}
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground font-medium">
+                                            {t.date}
+                                        </span>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
                 {/* Contact & Hours Section */}
-                <section id="contact" className="py-16 bg-muted/30 border-b">
+                <section id="contact" className="py-16 bg-background border-b">
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="flex items-start gap-4">
-                                <div className="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <div className="flex items-start gap-4 p-5 rounded-2xl border border-border/80 bg-muted/20">
+                                <div className="size-12 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/30">
                                     <PhoneIcon className="size-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-sm text-foreground">
-                                        Phone & Emergency
+                                    <h3 className="font-bold text-sm text-foreground">
+                                        Phone & Urgent Care
                                     </h3>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        Direct Clinic Line:
+                                        Direct Reception Desk:
                                     </p>
-                                    <p className="text-sm font-semibold text-foreground mt-0.5">
+                                    <p className="text-sm font-bold text-foreground mt-0.5">
                                         +1 (555) 234-5678
                                     </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className="text-xs text-cyan-600 dark:text-cyan-400 font-medium mt-1">
                                         Emergency 24/7 On-Call
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-4">
-                                <div className="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <div className="flex items-start gap-4 p-5 rounded-2xl border border-border/80 bg-muted/20">
+                                <div className="size-12 rounded-xl bg-gradient-to-tr from-blue-500/20 to-purple-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30">
                                     <ClockIcon className="size-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-sm text-foreground">
-                                        Clinic Hours
+                                    <h3 className="font-bold text-sm text-foreground">
+                                        Clinic Operating Hours
                                     </h3>
                                     <p className="text-xs text-muted-foreground mt-1">
                                         Mon – Fri: 8:00 AM – 7:00 PM
@@ -1571,21 +1922,21 @@ export default function Welcome({
                                         Saturday: 9:00 AM – 4:00 PM
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        Sunday: Urgent Care Only
+                                        Sunday: Urgent Appointments Only
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-4">
-                                <div className="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <div className="flex items-start gap-4 p-5 rounded-2xl border border-border/80 bg-muted/20">
+                                <div className="size-12 rounded-xl bg-gradient-to-tr from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30">
                                     <MapPinIcon className="size-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-sm text-foreground">
-                                        Location
+                                    <h3 className="font-bold text-sm text-foreground">
+                                        Clinic Location
                                     </h3>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        Medi Pro Medical Tower
+                                        Smart Tech Medical Tower
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                         Suite 400, 750 Health Science Blvd
@@ -1600,46 +1951,60 @@ export default function Welcome({
                 </section>
 
                 {/* Footer */}
-                <footer className="py-8 bg-background text-xs text-muted-foreground">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-2">
-                            <StethoscopeIcon className="size-4 text-primary" />
-                            <span className="font-semibold text-foreground">
-                                Medi Pro Clinic
+                <footer className="py-10 bg-slate-950 text-white text-xs border-t border-slate-800">
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <BrandLogo size="md" variant="light" />
+                            <span className="hidden sm:inline-block text-slate-600">
+                                |
                             </span>
-                            <span>
-                                • All rights reserved &copy;{" "}
-                                {new Date().getFullYear()}
+                            <span className="text-slate-400 text-[11px]">
+                                &copy; {new Date().getFullYear()} Smart Tech
+                                Medical Clinic. All rights reserved.
                             </span>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center justify-center gap-5 text-slate-400 text-xs font-medium">
+                            <a
+                                href="#booking"
+                                className="hover:text-cyan-400 transition-colors"
+                            >
+                                Book Online
+                            </a>
+                            <span>•</span>
+                            <a
+                                href="#facilities"
+                                className="hover:text-cyan-400 transition-colors"
+                            >
+                                Facilities
+                            </a>
+                            <span>•</span>
                             <a
                                 href="#services"
-                                className="hover:text-foreground"
+                                className="hover:text-cyan-400 transition-colors"
                             >
                                 Services
                             </a>
                             <span>•</span>
                             <a
                                 href="#specialists"
-                                className="hover:text-foreground"
+                                className="hover:text-cyan-400 transition-colors"
                             >
                                 Doctors
                             </a>
                             <span>•</span>
                             <a
-                                href="#booking"
-                                className="hover:text-foreground"
+                                href="#reviews"
+                                className="hover:text-cyan-400 transition-colors"
                             >
-                                Book Online
+                                Reviews
                             </a>
                             <span>•</span>
                             <Link
                                 href={auth?.user ? "/dashboard" : "/login"}
                                 prefetch
-                                className="hover:text-foreground transition-colors"
+                                className="text-cyan-400 hover:text-white font-semibold transition-colors"
                             >
-                                Staff Portal
+                                Staff Login
                             </Link>
                         </div>
                     </div>

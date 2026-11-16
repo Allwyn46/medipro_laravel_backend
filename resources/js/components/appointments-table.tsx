@@ -23,7 +23,6 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
     Columns3Icon,
-    EllipsisVerticalIcon,
     PlusIcon,
     ArrowUpDownIcon,
     CalendarIcon,
@@ -280,65 +279,6 @@ const columns = columnHelper.columns([
                     )}
                     {status}
                 </Badge>
-            );
-        },
-    }),
-    columnHelper.display({
-        id: "actions",
-        cell: ({ row }) => {
-            const apt = row.original;
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger
-                        render={
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-muted-foreground hover:text-foreground"
-                            />
-                        }
-                    >
-                        <EllipsisVerticalIcon className="size-4" />
-                        <span className="sr-only">Appointment options</span>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                        {apt.leadId && (
-                            <DropdownMenuItem
-                                render={<Link href={`/leads/${apt.leadId}`} prefetch />}
-                            >
-                                View Patient Lead
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                            onClick={() => {
-                                toast.success(`Checked in ${apt.patientName}`, {
-                                    description: `Assigned room: ${apt.room}`,
-                                });
-                            }}
-                        >
-                            Patient Check-In
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => {
-                                toast.info(`Calling ${apt.patientName}`, {
-                                    description: `Phone: ${apt.patientPhone}`,
-                                });
-                            }}
-                        >
-                            Call Patient
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                            onClick={() => {
-                                toast.info(`Rescheduling appointment`, {
-                                    description: `Current slot: ${apt.dateTimeFormatted}`,
-                                });
-                            }}
-                        >
-                            Reschedule Slot
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
             );
         },
     }),

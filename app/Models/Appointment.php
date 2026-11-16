@@ -204,7 +204,12 @@ class Appointment extends Model
             return false;
         }
 
-        if (in_array($this->status, ['Confirmed', 'Cancelled'])) {
+        if (in_array($this->status, ['Confirmed', 'Cancelled', 'Pending', 'Reschedule'])) {
+            return false;
+        }
+
+        // Dual confirmation reminders are strictly for staff-scheduled appointments or appointments awaiting confirmation
+        if (! in_array($this->source, ['Staff Booking', 'Staff Scheduling']) && $this->status !== 'Awaiting Confirmation') {
             return false;
         }
 

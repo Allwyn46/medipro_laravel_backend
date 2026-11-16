@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment Update - MediPro</title>
+    <title>Appointment Update - Smart Tech Medical Clinic</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -106,8 +106,9 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>MediPro Clinic</h1>
+        <div class="header" style="background: linear-gradient(135deg, #070B19 0%, #0F172A 100%); border-bottom: 2px solid #00D2FF; text-align: center; padding: 24px;">
+            <img src="{{ config('app.url') }}/images/smart-tech-logo.jpg" alt="SMART TECH Medical" style="max-height: 48px; width: auto; margin: 0 auto; display: block;" onerror="this.style.display='none'" />
+            <h1 style="margin: 6px 0 0; color: #ffffff; font-size: 20px; font-weight: 800; letter-spacing: 2px;">SMART TECH <span style="color: #00D2FF;">CLINIC</span></h1>
         </div>
         <div class="content">
             <span class="badge">Appointment Update</span>
@@ -152,7 +153,7 @@
             </div>
         </div>
         <div class="footer">
-            &copy; {{ date('Y') }} MediPro Clinic &bull; 100 Medical Boulevard, Suite 400 &bull; +91 98765 43210
+            &copy; {{ date('Y') }} Smart Tech Medical Clinic &bull; 100 Medical Boulevard, Suite 400 &bull; +91 98765 43210
         </div>
     </div>
 </body>

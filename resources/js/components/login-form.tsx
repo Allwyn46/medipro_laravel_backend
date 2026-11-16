@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
 import { LoginFormData } from "@/types";
+import { BrandLogo } from "@/components/brand-logo";
 
 export function LoginForm({
     className,
@@ -70,11 +71,14 @@ export function LoginForm({
 
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
+            <div className="flex justify-center pb-1">
+                <BrandLogo size="md" />
+            </div>
             <Card>
                 <CardHeader>
-                    <CardTitle>Login to your account</CardTitle>
+                    <CardTitle>Staff Sign In</CardTitle>
                     <CardDescription>
-                        Enter your email below to login to your account
+                        Enter your credentials to access the clinical dashboard
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

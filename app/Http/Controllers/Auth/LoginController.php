@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -59,25 +60,33 @@ class LoginController extends Controller
         }
     }
 
-    public function logout(Request $request): JsonResponse
+    public function logout(Request $request): RedirectResponse|JsonResponse
     {
         try {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Logged out successfully',
-                'redirect' => route('login'),
-            ]);
+            if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Logged out successfully',
+                    'redirect' => route('login'),
+                ]);
+            }
+
+            return redirect()->route('login');
         } catch (\Throwable $e) {
             Log::error('Logout error: '.$e->getMessage());
 
-            return response()->json([
-                'status' => 'error',
-                'message' => 'An error occurred while logging out.',
-            ], 500);
+            if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'An error occurred while logging out.',
+                ], 500);
+            }
+
+            return redirect()->route('login');
         }
     }
 }

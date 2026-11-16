@@ -110,14 +110,14 @@ export function NavUser({
                                 </div>
                             </DropdownMenuLabel>
                         </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                            <DropdownMenuItem>
-                                <CircleUserRoundIcon />
-                                Account ({isAdmin ? "Administrator" : "Doctor"})
-                            </DropdownMenuItem>
-                            {isAdmin && (
-                                <>
+                        {isAdmin && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuGroup>
+                                    <DropdownMenuItem>
+                                        <CircleUserRoundIcon />
+                                        Account (Administrator)
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onClick={() => router.visit("/settings/leads")}
                                         className="cursor-pointer"
@@ -132,9 +132,9 @@ export function NavUser({
                                         <UserPlusIcon />
                                         Manage Doctors
                                     </DropdownMenuItem>
-                                </>
-                            )}
-                        </DropdownMenuGroup>
+                                </DropdownMenuGroup>
+                            </>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             onClick={() => router.post("/logout")}

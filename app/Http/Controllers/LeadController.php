@@ -45,7 +45,7 @@ class LeadController extends Controller
         return Inertia::render('leads/show', [
             'lead' => $lead,
             'allLeads' => $allLeads,
-            'customFields' => LeadFormField::active()->get(),
+            'customFields' => LeadFormField::all(),
         ]);
     }
 

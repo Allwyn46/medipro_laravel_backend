@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AppointmentConfirmedPatientMail;
+use App\Mail\AppointmentUpdatedPatientMail;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Lead;
 use App\Models\LeadActivity;
+use App\Models\User;
 use App\Services\AppointmentExpirationService;
 use Database\Seeders\AppointmentSeeder;
 use Database\Seeders\LeadSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -213,8 +218,8 @@ class AppointmentController extends Controller
             'doctor_token' => $doctorToken,
         ]);
 
-        // Send 1-week reminder email with confirmation button to both patient and doctor
-        if ($appointment->shouldSendReminder()) {
+        // Send 1-week reminder email with confirmation button ONLY for staff-scheduled appointments
+        if ($isStaffScheduling && $appointment->shouldSendReminder()) {
             $appointment->sendConfirmationReminders();
         }
 
@@ -336,23 +341,148 @@ class AppointmentController extends Controller
             abort(403, 'Unauthorized. You cannot confirm an appointment assigned to another specialist.');
         }
 
+        $wasAlreadyConfirmed = $appointment->status === 'Confirmed';
+
         $appointment->update([
             'status' => 'Confirmed',
+            'doctor_confirmed_at' => $appointment->doctor_confirmed_at ?? now(),
             'room' => $appointment->room ?: 'Consultation Suite 1',
             'duration' => $appointment->duration ?: '45 mins',
         ]);
 
+        $fresh = $appointment->fresh();
+
         // Update corresponding lead status if exists
-        if ($appointment->lead_id) {
-            Lead::where('id', $appointment->lead_id)->update([
+        if ($fresh->lead_id) {
+            Lead::where('id', $fresh->lead_id)->update([
                 'status' => 'Consultation Scheduled',
             ]);
+        }
+
+        // Only send confirmation email if moving into Confirmed status
+        if (! $wasAlreadyConfirmed) {
+            $patientEmail = $fresh->patient_email;
+            if (! empty($patientEmail) && filter_var($patientEmail, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    Mail::to($patientEmail)->send(new AppointmentConfirmedPatientMail($fresh));
+
+                    if ($fresh->lead_id) {
+                        LeadActivity::create([
+                            'lead_id' => $fresh->lead_id,
+                            'type' => 'Email',
+                            'title' => 'Appointment Confirmation Sent',
+                            'description' => "Automated confirmation email with 1-click Google/Apple calendar invite dispatched to {$patientEmail}.",
+                            'doctor' => $fresh->doctor,
+                            'date' => now()->format('Y-m-d H:i'),
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Failed to send appointment confirmation email to {$patientEmail}: ".$e->getMessage());
+                }
+            } elseif ($fresh->lead_id) {
+                LeadActivity::create([
+                    'lead_id' => $fresh->lead_id,
+                    'type' => 'Consultation',
+                    'title' => 'Appointment Confirmed',
+                    'description' => "Appointment officially confirmed by doctor ({$fresh->doctor}). No patient email on file for calendar dispatch.",
+                    'doctor' => $fresh->doctor,
+                    'date' => now()->format('Y-m-d H:i'),
+                ]);
+            }
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Appointment confirmed successfully.',
-            'appointment' => $appointment->fresh(),
+            'appointment' => $fresh,
+        ]);
+    }
+
+    /**
+     * Update appointment details (date, time, doctor, room, etc.).
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $appointment = Appointment::findOrFail($id);
+
+        if ($request->user() && $request->user()->cannot('update', $appointment)) {
+            abort(403, 'Unauthorized. You cannot modify an appointment assigned to another specialist.');
+        }
+
+        $validated = $request->validate([
+            'date' => ['sometimes', 'string'],
+            'time' => ['sometimes', 'string'],
+            'doctor_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+            'doctor' => ['sometimes', 'nullable', 'string'],
+            'room' => ['sometimes', 'nullable', 'string'],
+            'service' => ['sometimes', 'nullable', 'string'],
+            'duration' => ['sometimes', 'nullable', 'string'],
+            'notes' => ['sometimes', 'nullable', 'string'],
+            'status' => ['sometimes', 'string'],
+        ]);
+
+        // If doctor_id changed, sync doctor name
+        if (isset($validated['doctor_id']) && ! empty($validated['doctor_id'])) {
+            $docUser = User::find($validated['doctor_id']);
+            if ($docUser) {
+                $validated['doctor'] = $docUser->name;
+            }
+        }
+
+        $watchedFields = [
+            'date' => 'Date',
+            'time' => 'Time',
+            'doctor' => 'Specialist',
+            'room' => 'Location / Room',
+        ];
+
+        $changes = [];
+        $wasConfirmed = $appointment->status === 'Confirmed';
+
+        foreach ($watchedFields as $field => $label) {
+            if (array_key_exists($field, $validated) && $appointment->{$field} !== $validated[$field]) {
+                $changes[$field] = [
+                    'label' => $label,
+                    'old' => (string) $appointment->{$field},
+                    'new' => (string) $validated[$field],
+                ];
+            }
+        }
+
+        $appointment->update($validated);
+        $fresh = $appointment->fresh();
+
+        // If appointment was already Confirmed and key schedule attributes changed, send update email
+        if ($wasConfirmed && ! empty($changes)) {
+            $patientEmail = $fresh->patient_email;
+            if (! empty($patientEmail) && filter_var($patientEmail, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    Mail::to($patientEmail)->send(new AppointmentUpdatedPatientMail($fresh, $changes, 1));
+
+                    if ($fresh->lead_id) {
+                        $changeSummary = collect($changes)
+                            ->map(fn ($c) => "{$c['label']}: {$c['old']} → {$c['new']}")
+                            ->implode(', ');
+
+                        LeadActivity::create([
+                            'lead_id' => $fresh->lead_id,
+                            'type' => 'Email',
+                            'title' => 'Appointment Schedule Update Sent',
+                            'description' => "Schedule revised ({$changeSummary}). Updated calendar invite dispatched to {$patientEmail}.",
+                            'doctor' => $fresh->doctor,
+                            'date' => now()->format('Y-m-d H:i'),
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Failed to send appointment update email to {$patientEmail}: ".$e->getMessage());
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Appointment updated successfully.',
+            'appointment' => $fresh,
         ]);
     }
 

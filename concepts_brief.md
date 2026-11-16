@@ -1,75 +1,53 @@
-# Dedicated Appointments Navigation & Advanced Schedule Filtering
+# Lead Intake Custom Field Kanban Management
 
 * **Author:** allwyn46
-* **Date:** 2026-11-13
+* **Date:** 2026-11-16
 
 ## Overview
 
-Clinical staff and specialists need an authoritative, full-screen registry to search, filter, and audit patient appointments across any date window and lifecycle status without cluttering the operational front-desk dashboard. Currently, appointments are embedded on the main dashboard alongside revenue widgets, where filtering is restricted to basic search, doctor selection, and single-day tabs (Today/Tomorrow).
+The Lead Form Settings page (`/settings/leads`) will provide an admin-restricted, two-column Kanban board (**Active** vs **Inactive**) dedicated solely to managing staff-created custom intake fields. All ten standard built-in lead fields (*Patient Full Name, Phone Number, Email Address, Clinical Service, Assigned Doctor, Pipeline Status, Priority Level, Total Estimated Value, Referral Source, and Clinical Notes*) are excluded from the board and remain permanent. 
 
-This feature introduces a dedicated "Appointments" tab directly beneath "Leads" in the main sidebar, navigating to `/appointments`. The page provides an advanced, read-only data table featuring multi-status selection (enabling concurrent filtering across statuses such as `Confirmed`, `Pending`, `Awaiting Confirmation`, and `Reschedule`), dual-layer date filtering (combining quick preset pills like `Today`, `Tomorrow`, `This Week`, and `This Month` with a custom date-range picker), and strict doctor role-based scoping so clinicians only see their own appointments while administrators retain clinic-wide visibility. The dashboard's existing appointments table remains intact for daily front-desk operations.
+Dragging a custom field card between the Active and Inactive columns triggers an immediate auto-save API call. This instantly updates field availability within the "Add New Patient Lead" modal while preserving historical intake data and labels on all existing patient records.
 
 ## Analysis
 
-Evaluating this concept against the live MediPro codebase across seven architectural review lenses surfaces several technical requirements and constraints:
+### 1. Architectural & Data Integrity Findings
+* **Historical Label Resolution Bug**: In the current implementation of `LeadController::show()`, custom field metadata is loaded via `LeadFormField::active()->get()`. When an admin moves a field to "Inactive", historical leads containing values for that field lose their label mapping and fallback to raw snake_case database keys in the UI. To maintain historical readability, `LeadController::show()` must fetch all field definitions (`LeadFormField::all()`) regardless of active status.
+* **Storage Separation**: Built-in lead fields map directly to dedicated SQL columns on the `leads` table, whereas custom intake fields are stored as JSON key-value pairs within `leads.custom_fields`. Restricting the Kanban board exclusively to custom fields prevents structural schema mismatches and protects core clinical reporting metrics.
+* **Validation Behavior for Inactive Required Fields**: In `LeadController::store()`, backend validation rules are constructed dynamically from active fields. If a custom field is flagged as `is_required` but placed in the Inactive column, it will not block new lead submissions. Cards in the Inactive column will display a "Required when active" indicator so administrators understand the conditional requirement.
 
-1. **Routing and Controller Method Disambiguation:**
-   `AppointmentController` already defines an `index(): JsonResponse` method used by JSON consumers. Overwriting or overloading this method creates a route collision. The dedicated Inertia page must use a dedicated controller action, `registry(Request $request): Response`, registered as `Route::get('/appointments', [AppointmentController::class, 'registry'])->name('appointments.index');`.
-
-2. **Doctor-Level Scoping and Authorization Boundary:**
-   To maintain security isolation between specialists (as verified in `DoctorScopingTest.php`):
-   - When an authenticated user has the `doctor` role (`$user->isDoctor()`), the query must strictly restrict results to `$user->doctor->id`. Any input parameter such as `?doctor_id=...` passed in the query string must be ignored.
-   - When an authenticated administrator (`$user->isAdmin()`) visits the page, all clinic appointments are visible by default, and an optional specialist dropdown allows filtering by a specific doctor. The list of active doctors is passed as a prop exclusively to administrators.
-
-3. **Date Normalization for Interval Filtering:**
-   Appointment records in the database store dates as text strings (`YYYY-MM-DD`, alongside relative values like `'Today'`, `'Tomorrow'`, `'Nov 6'`). Evaluating interval conditions (such as `date >= dateFrom && date <= dateTo`) against unnormalized strings produces inaccurate results. The client-side table must use a date normalizer mirroring `Appointment::getScheduledDate()` that converts relative and formatted strings into standardized ISO date strings (`YYYY-MM-DD`) before interval checks.
-
-4. **Multi-Status Selection and Quick Groupings:**
-   Instead of a single dropdown, status filtering uses a faceted multi-select popover with checkboxes for each lifecycle status (`Confirmed`, `In Progress`, `Scheduled`, `Completed`, `Cancelled`, `Pending`, `Awaiting Confirmation`, `Reschedule`). Two clinical macro shortcuts are provided:
-   - "Needs Action" (selects `Pending` and `Awaiting Confirmation`).
-   - "Active Schedule" (selects `Confirmed`, `In Progress`, and `Scheduled`).
-
-5. **Read-Only Ledger Boundary with Slide-Over Audit Drawer:**
-   In line with the requirement for no direct row mutations, the registry omits mutating buttons (such as status updates, cancellations, or check-ins). To allow clinical staff to inspect complete visit context, rows or action menus trigger a slide-over audit drawer (`Sheet`) displaying booking timestamps, confirmation tokens, clinical notes, and a navigational link to the patient lead (`/leads/{id}`).
-
-6. **Retention of the Dashboard Schedule View:**
-   The dashboard's existing table remains untouched. It serves as the immediate daily triage and check-in station, while `/appointments` acts as the analytical and audit registry.
+### 2. Interaction & UX Ergonomics
+* **Immediate Auto-Save with Rollback**: When a card is dropped into a new column, the frontend applies an optimistic state update and dispatches an asynchronous `PATCH` request. If the network request fails, the UI reverts the card to its origin column and displays an error alert. A toast notification with an "Undo" trigger allows quick reversal of accidental moves without leaving the page.
+* **Accessibility & Pointer Fallback (WCAG 2.5.7)**: Relying solely on drag-and-drop gestures introduces friction on mobile devices and assistive hardware. Each field card includes a secondary one-click action button (e.g., "Move to Inactive" / "Move to Active") to allow status toggling without dragging.
+* **Component Reuse**: The application already includes `@dnd-kit/core` and `@dnd-kit/sortable` in `package.json`. The board will utilize these existing libraries rather than introducing third-party packages.
 
 ## Goals vs. Non-Goals
 
-* **In-Scope Goals:**
-  * Add "Appointments" to `navMain` in `resources/js/components/app-sidebar.tsx` directly under "Leads", rendered with `CalendarIcon`.
-  * Define `Route::get('/appointments', [AppointmentController::class, 'registry'])->name('appointments.index');` protected by the `auth` middleware.
-  * Implement `AppointmentController::registry` enforcing strict doctor-level scoping and admin-only doctor list props.
-  * Build a dedicated Inertia page (`resources/js/pages/appointments/index.tsx`) using the standard clinic `Layout`.
-  * Support multi-status selection via a multi-select popover with count badges and reset capability.
-  * Support dual-layer date filtering: preset pills (`All`, `Today`, `Tomorrow`, `This Week`, `This Month`) and custom date-range inputs (`From` and `To`).
-  * Implement date normalization for accurate range filtering across relative date strings.
-  * Implement a read-only slide-over inspection drawer for viewing detailed appointment audit data.
-  * Add comprehensive feature tests (`AppointmentsRegistryTest.php`) verifying doctor scoping, admin access, unauthorized redirects, and filter contracts.
+### In-Scope Goals
+* **Two-Column Kanban Interface**: Provide side-by-side Active and Inactive droppable drop zones on `/settings/leads`.
+* **Drag-and-Drop Interaction**: Support dragging cards between Active and Inactive columns using `@dnd-kit`.
+* **One-Click Fallback Controls**: Provide direct toggle buttons on cards for keyboard and touch ergonomics.
+* **Immediate Auto-Save Persistence**: Implement a backend route (`PATCH /api/settings/lead-fields/{id}/status`) to update `is_active` asynchronously.
+* **Intake Form Integration**: Ensure `AddLeadDialog` dynamically filters and renders only fields marked `is_active = true`.
+* **Historical Data Integrity**: Update `LeadController::show()` to pass all field definitions so deactivated fields remain readable on past records.
+* **Admin Authorization Enforcement**: Restrict settings modification endpoints to authenticated administrative accounts.
 
-* **Out-of-Scope Non-Goals:**
-  * Modifying or replacing the existing dashboard table.
-  * Adding mutating row actions (cancellations, check-in, status changes) directly inside the registry table.
-  * Calendar grid (month/week grid view) visualizations; this feature focuses strictly on tabular data filtering.
-  * External calendar syncing (Google Calendar, Apple iCal, Outlook).
+### Out-of-Scope Non-Goals
+* **Built-in Field Management**: Permitting toggling, reordering, or deactivating standard clinic intake fields (Name, Phone, Email, Service, Doctor, Status, Priority, Value, Source, Notes).
+* **Intra-Column Custom Sorting**: Reordering active fields within the column to change intake form layout sequence (ordering remains stable based on creation ID/timestamp).
+* **Destructive Data Purging**: Deleting past responses or altering existing `leads.custom_fields` records when a field is deactivated.
+* **Non-Admin Configuration**: Granting doctor or standard staff roles permission to toggle intake field availability.
 
 ## Alternatives Weighed
 
-* **Overriding `AppointmentController::index` with Content Negotiation:**
-  * *Option:* Use `$request->wantsJson()` inside the existing `index` method to return either JSON or Inertia.
-  * *Reason Rejected by Reviewers:* Brittle and error-prone. Browser page reloads or client-side fetch requests with ambiguous `Accept` headers can trigger unexpected JSON responses. A dedicated method (`registry`) provides explicit separation.
-* **Inline Status Mutation Buttons on Each Row:**
-  * *Option:* Including quick "Complete" or "Cancel" buttons on table rows.
-  * *Reason Rejected by Author:* Violates the explicit requirement for a clean, non-mutating registry and increases the risk of accidental status mutations during historical audits.
-* **Replacing Dashboard Table with a Link to `/appointments`:**
-  * *Option:* Removing the dashboard appointments card completely.
-  * *Reason Rejected by Author:* Front-desk staff need an immediate view of today's queue and pending portal bookings without navigating away from the dashboard.
+* **Tabular Toggle Switches**: Rejected by author. A standard list with toggle switches was considered, but the author specifically mandated a spatial two-column Kanban table for visual segregation.
+* **Including Standard Built-in Fields on Board**: Rejected by author. Managing core fields on the board was evaluated, but the author confirmed all standard clinical fields must be completely excluded from the board.
+* **Explicit Save Changes Button (Staged Mutation)**: Rejected by author. Staging changes locally until a manual "Save" button is clicked was considered, but auto-save on card drop was selected for operational efficiency.
+* **Custom Intake Form Drag-to-Order**: Rejected by author. Enabling vertical drag sorting to dictate exact input order was evaluated, but the author confirmed no ordering requirement is needed.
 
 ## Key Decisions & Staging for Next Steps
 
-1. **Routing:** Register `GET /appointments` using `AppointmentController::registry`.
-2. **Access Security:** Hardcode `doctor_id` enforcement in the backend for doctor logins; ignore user-supplied `doctor_id` in doctor requests.
-3. **Filtering Stack:** Combine text search, multi-status faceted selection, specialist dropdown (admins), preset date pills, and custom date range picker.
-4. **Data Normalization:** Implement a shared date normalizer in TypeScript to ensure relative dates (`Today`, `Tomorrow`) match calendar filters correctly.
-5. **Detailed Inspection:** Provide a non-mutating slide-over audit drawer for full record inspection.
+* **Dependency Reuse**: Utilize existing `@dnd-kit` packages without adding new dependencies.
+* **Dedicated Status Endpoint**: Create `PATCH /api/settings/lead-fields/{id}/status` accepting `{"is_active": boolean}`.
+* **Historical Label Fix**: Update `LeadController::show()` to use `LeadFormField::all()` to prevent slug fallback bugs on past leads.
+* **Next Step**: Proceed to formal design specification with `/egm-draft` or refine the brief based on human feedback.

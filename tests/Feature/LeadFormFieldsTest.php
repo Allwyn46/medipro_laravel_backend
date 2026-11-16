@@ -160,3 +160,83 @@ test('authenticated admin can deactivate a custom field', function () {
 
     expect($field->fresh()->is_active)->toBeFalse();
 });
+
+test('unauthenticated users cannot update custom field status', function () {
+    $this->patchJson(route('lead-fields.update-status', ['id' => 1]), [
+        'is_active' => false,
+    ])->assertUnauthorized();
+});
+
+test('doctors cannot update custom field status', function () {
+    $doctorUser = User::factory()->doctor()->create();
+
+    $field = LeadFormField::create([
+        'label' => 'Chief Complaint',
+        'name' => 'chief_complaint',
+        'type' => 'text',
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($doctorUser)->patchJson(route('lead-fields.update-status', ['id' => $field->id]), [
+        'is_active' => false,
+    ])->assertForbidden();
+});
+
+test('authenticated admin can toggle custom field status between active and inactive', function () {
+    $user = User::factory()->admin()->create();
+
+    $field = LeadFormField::create([
+        'label' => 'Insurance Carrier',
+        'name' => 'insurance_carrier',
+        'type' => 'text',
+        'is_active' => true,
+    ]);
+
+    // Deactivate
+    $response = $this->actingAs($user)->patchJson(route('lead-fields.update-status', ['id' => $field->id]), [
+        'is_active' => false,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson([
+        'success' => true,
+        'field' => [
+            'id' => $field->id,
+            'is_active' => false,
+        ],
+    ]);
+    expect($field->fresh()->is_active)->toBeFalse();
+
+    // Reactivate
+    $response2 = $this->actingAs($user)->patchJson(route('lead-fields.update-status', ['id' => $field->id]), [
+        'is_active' => true,
+    ]);
+
+    $response2->assertOk();
+    $response2->assertJson([
+        'success' => true,
+        'field' => [
+            'id' => $field->id,
+            'is_active' => true,
+        ],
+    ]);
+    expect($field->fresh()->is_active)->toBeTrue();
+});
+
+test('updateStatus requires boolean is_active', function () {
+    $user = User::factory()->admin()->create();
+
+    $field = LeadFormField::create([
+        'label' => 'Referred Hospital',
+        'name' => 'referred_hospital',
+        'type' => 'text',
+        'is_active' => true,
+    ]);
+
+    $response = $this->actingAs($user)->patchJson(route('lead-fields.update-status', ['id' => $field->id]), [
+        'is_active' => 'invalid-boolean-value',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['is_active']);
+});

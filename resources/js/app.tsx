@@ -1,6 +1,6 @@
 import { createInertiaApp } from "@inertiajs/react";
 
-const appName = import.meta.env.VITE_APP_NAME || "Medi Pro";
+const appName = import.meta.env.VITE_APP_NAME || "Smart Tech Medical Clinic";
 
 void createInertiaApp({
     title: (title) =>

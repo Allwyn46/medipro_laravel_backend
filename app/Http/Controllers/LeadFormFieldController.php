@@ -67,6 +67,27 @@ class LeadFormFieldController extends Controller
     }
 
     /**
+     * Update the active status of the specified lead form field.
+     */
+    public function updateStatus(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $field = LeadFormField::findOrFail($id);
+        $field->update([
+            'is_active' => (bool) $validated['is_active'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $field->is_active ? "Field '{$field->label}' activated successfully." : "Field '{$field->label}' deactivated successfully.",
+            'field' => $field,
+        ]);
+    }
+
+    /**
      * Deactivate the specified lead form field.
      */
     public function destroy(int $id): JsonResponse

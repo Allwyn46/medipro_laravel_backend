@@ -27,7 +27,11 @@ class SendAppointmentReminders extends Command
     public function handle(): int
     {
         $appointments = Appointment::whereNull('reminder_sent_at')
-            ->whereNotIn('status', ['Confirmed', 'Cancelled'])
+            ->whereIn('status', ['Awaiting Confirmation', 'Scheduled'])
+            ->where(function ($q) {
+                $q->whereIn('source', ['Staff Booking', 'Staff Scheduling'])
+                    ->orWhere('status', 'Awaiting Confirmation');
+            })
             ->get();
 
         $sentCount = 0;

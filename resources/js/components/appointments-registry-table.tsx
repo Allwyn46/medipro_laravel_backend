@@ -170,9 +170,11 @@ export function AppointmentsRegistryTable({
     >("all");
     const [customFromDate, setCustomFromDate] = React.useState("");
     const [customToDate, setCustomToDate] = React.useState("");
-    const [selectedDoctorId, setSelectedDoctorId] = React.useState<string>(
-        initialDoctorId ? String(initialDoctorId) : "ALL",
-    );
+    const [selectedDoctor, setSelectedDoctor] = React.useState<string>(() => {
+        if (!initialDoctorId) return "ALL";
+        const doc = doctors.find((d) => d.id === initialDoctorId);
+        return doc ? doc.name : "ALL";
+    });
 
     // Table state
     const [sorting, setSorting] = React.useState<SortingState>([
@@ -233,7 +235,7 @@ export function AppointmentsRegistryTable({
         setDatePreset("all");
         setCustomFromDate("");
         setCustomToDate("");
-        setSelectedDoctorId("ALL");
+        setSelectedDoctor("ALL");
     };
 
     // Filter appointments
@@ -279,11 +281,11 @@ export function AppointmentsRegistryTable({
             }
 
             // Doctor Filter (Admin)
-            if (isAdmin && selectedDoctorId !== "ALL") {
-                const targetDoc = doctors.find((d) => String(d.id) === selectedDoctorId);
+            if (isAdmin && selectedDoctor !== "ALL") {
+                const targetDoc = doctors.find((d) => d.name === selectedDoctor);
                 const docMatches =
-                    (apt.doctor_id && String(apt.doctor_id) === selectedDoctorId) ||
-                    (targetDoc && apt.doctor === targetDoc.name);
+                    apt.doctor === selectedDoctor ||
+                    (targetDoc && apt.doctor_id === targetDoc.id);
 
                 if (!docMatches) return false;
             }
@@ -297,7 +299,7 @@ export function AppointmentsRegistryTable({
         datePreset,
         customFromDate,
         customToDate,
-        selectedDoctorId,
+        selectedDoctor,
         isAdmin,
         doctors,
     ]);
@@ -543,7 +545,7 @@ export function AppointmentsRegistryTable({
         datePreset !== "all" ||
         customFromDate !== "" ||
         customToDate !== "" ||
-        selectedDoctorId !== "ALL";
+        selectedDoctor !== "ALL";
 
     return (
         <div className="flex flex-col gap-4">
@@ -657,17 +659,22 @@ export function AppointmentsRegistryTable({
                             <ChevronDownIcon className="size-3 text-muted-foreground ml-0.5" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 p-2">
-                            <DropdownMenuLabel className="text-xs font-semibold px-2 py-1 flex items-center justify-between">
+                            <div className="px-2 py-1 flex items-center justify-between text-xs font-semibold text-muted-foreground">
                                 <span>Filter by Status</span>
                                 {selectedStatuses.length > 0 && (
                                     <button
-                                        onClick={clearAllStatuses}
-                                        className="text-[11px] text-muted-foreground hover:text-foreground font-normal cursor-pointer"
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            clearAllStatuses();
+                                        }}
+                                        className="text-[11px] text-primary hover:underline font-normal cursor-pointer"
                                     >
                                         Clear all
                                     </button>
                                 )}
-                            </DropdownMenuLabel>
+                            </div>
                             <DropdownMenuSeparator />
 
                             {/* Clinical Macros */}
@@ -677,18 +684,28 @@ export function AppointmentsRegistryTable({
                                 </span>
                                 <div className="flex items-center gap-1.5">
                                     <Button
+                                        type="button"
                                         variant="outline"
                                         size="sm"
                                         className="h-6 text-[10px] px-2 flex-1 justify-center"
-                                        onClick={setMacroNeedsAction}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setMacroNeedsAction();
+                                        }}
                                     >
                                         Needs Action
                                     </Button>
                                     <Button
+                                        type="button"
                                         variant="outline"
                                         size="sm"
                                         className="h-6 text-[10px] px-2 flex-1 justify-center"
-                                        onClick={setMacroActiveSchedule}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setMacroActiveSchedule();
+                                        }}
                                     >
                                         Active
                                     </Button>
@@ -735,11 +752,15 @@ export function AppointmentsRegistryTable({
                     {/* Specialist Filter (Admin only) */}
                     {isAdmin && doctors.length > 0 && (
                         <Select
-                            value={selectedDoctorId}
-                            onValueChange={(val) => setSelectedDoctorId(val ?? "ALL")}
+                            value={selectedDoctor}
+                            onValueChange={(val) => setSelectedDoctor(val ?? "ALL")}
                         >
                             <SelectTrigger className="w-[180px] h-9 text-xs">
-                                <SelectValue placeholder="All Specialists" />
+                                <SelectValue placeholder="All Specialists">
+                                    {selectedDoctor === "ALL"
+                                        ? "All Specialists"
+                                        : selectedDoctor}
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
@@ -749,7 +770,7 @@ export function AppointmentsRegistryTable({
                                     {doctors.map((doc) => (
                                         <SelectItem
                                             key={doc.id}
-                                            value={String(doc.id)}
+                                            value={doc.name}
                                             className="text-xs"
                                         >
                                             {doc.name}
@@ -772,9 +793,9 @@ export function AppointmentsRegistryTable({
                             <ChevronDownIcon className="size-3 text-muted-foreground ml-0.5" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuLabel className="text-xs font-semibold px-2 py-1">
+                            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                                 Toggle Columns
-                            </DropdownMenuLabel>
+                            </div>
                             <DropdownMenuSeparator />
                             {table
                                 .getAllColumns()

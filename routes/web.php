@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
 
     // APPOINTMENT MANAGEMENT APIS
     Route::get('/api/patients', [AppointmentController::class, 'patients'])->name('patients.index');
+    Route::patch('/api/appointments/{id}', [AppointmentController::class, 'update'])->name('appointments.update');
+    Route::patch('/appointments/{id}', [AppointmentController::class, 'update']);
     Route::post('/api/appointments/{id}/confirm', [AppointmentController::class, 'confirm'])->name('appointments.confirm');
     Route::post('/api/appointments/{id}/decline', [AppointmentController::class, 'decline'])->name('appointments.decline');
 
@@ -67,6 +69,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/settings/leads', [LeadController::class, 'settings'])->name('settings.leads');
         Route::get('/api/settings/lead-fields', [LeadFormFieldController::class, 'index'])->name('lead-fields.index');
         Route::post('/api/settings/lead-fields', [LeadFormFieldController::class, 'store'])->name('lead-fields.store');
+        Route::patch('/api/settings/lead-fields/{id}/status', [LeadFormFieldController::class, 'updateStatus'])->name('lead-fields.update-status');
         Route::delete('/api/settings/lead-fields/{id}', [LeadFormFieldController::class, 'destroy'])->name('lead-fields.destroy');
 
         // DOCTOR MANAGEMENT

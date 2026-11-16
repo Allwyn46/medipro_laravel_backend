@@ -1,13 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
   <defs>
-    <linearGradient id="mediGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0d9488" />
-      <stop offset="100%" stop-color="#059669" />
+    <linearGradient id="stGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="40%" stop-color="#2563EB" />
+      <stop offset="75%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#D946EF" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070B19" />
+      <stop offset="100%" stop-color="#0F172A" />
     </linearGradient>
   </defs>
   <!-- Background rounded squircle -->
-  <rect width="128" height="128" rx="32" fill="url(#mediGrad)" />
-  <!-- Medical Cross with smooth rounded corners -->
-  <rect x="50" y="22" width="28" height="84" rx="8" fill="#ffffff" />
-  <rect x="22" y="50" width="84" height="28" rx="8" fill="#ffffff" />
+  <rect width="128" height="128" rx="32" fill="url(#bgGrad)" />
+  <!-- Infinity Loop Ribbon -->
+  <path
+    d="M 44 42 C 26 42 18 52 18 64 C 18 76 26 86 44 86 C 60 86 64 64 64 64 C 64 64 68 42 84 42 C 102 42 110 52 110 64 C 110 76 102 86 84 86 C 68 86 64 64 64 64 C 64 64 60 42 44 42 Z"
+    stroke="url(#stGrad)"
+    stroke-width="12"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
 </svg>
