@@ -28,6 +28,8 @@ class LeadFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->phoneNumber(),
+            'age' => (string) fake()->numberBetween(18, 75),
+            'blood_group' => fake()->randomElement(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
             'service' => fake()->randomElement([
                 'Dental Implants',
                 'Orthodontics & Aligners',

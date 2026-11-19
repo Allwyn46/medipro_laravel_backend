@@ -360,7 +360,7 @@ export default function PipelinePage({
         () => [
             {
                 title: "Total In Pipeline",
-                value: `${leads.length} Leads`,
+                value: `${leads.length} patients`,
                 badgeText: "+8.3%",
                 badgeTrend: "up",
                 footerTrendText: "4 new inquiries this week",

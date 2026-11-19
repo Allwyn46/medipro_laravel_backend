@@ -52,7 +52,7 @@ const data = {
             icon: <ListIcon />,
         },
         {
-            title: "Leads",
+            title: "Patients",
             url: "/leads",
             icon: <ChartBarIcon />,
         },
@@ -165,8 +165,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
 
     const isAdmin = auth?.user?.role === "admin" || auth?.role === "admin";
-    const displayName = auth?.doctor?.name || auth?.user?.name || "Clinic Staff";
-    const displayEmail = auth?.doctor?.specialty || (isAdmin ? "Clinic Administrator" : (auth?.user?.email || "staff@medipro.com"));
+    const displayName =
+        auth?.doctor?.name || auth?.user?.name || "Clinic Staff";
+    const displayEmail =
+        auth?.doctor?.specialty ||
+        (isAdmin
+            ? "Clinic Administrator"
+            : auth?.user?.email || "staff@medipro.com");
 
     const currentUser = {
         name: displayName,

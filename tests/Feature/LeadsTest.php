@@ -151,6 +151,8 @@ test('authenticated users can create a new patient lead with custom attributes',
     $response = $this->actingAs($user)->postJson(route('leads.store'), [
         'name' => 'Rahul Sharma',
         'phone' => '+91 98765 43210',
+        'age' => '34',
+        'blood_group' => 'B+',
         'email' => 'rahul@example.com',
         'service' => 'Dental Implants & Cosmetic',
         'doctor' => 'Dr. Eddie Lake',
@@ -208,6 +210,8 @@ test('lead creation enforces dynamic custom field validation rules', function ()
     $response = $this->actingAs($user)->postJson(route('leads.store'), [
         'name' => 'Amit Patel',
         'phone' => '+91 98765 11111',
+        'age' => '42',
+        'blood_group' => 'A+',
         'service' => 'Dental Implants & Cosmetic',
         'doctor' => 'Dr. Eddie Lake',
         'status' => 'New',
@@ -221,6 +225,8 @@ test('lead creation enforces dynamic custom field validation rules', function ()
     $response2 = $this->actingAs($user)->postJson(route('leads.store'), [
         'name' => 'Amit Patel',
         'phone' => '+91 98765 11111',
+        'age' => '42',
+        'blood_group' => 'A+',
         'service' => 'Dental Implants & Cosmetic',
         'doctor' => 'Dr. Eddie Lake',
         'status' => 'New',
@@ -271,6 +277,8 @@ test('lead can be created with new patient statuses', function () {
     $response = $this->actingAs($user)->postJson(route('leads.store'), [
         'name' => 'Priya Patel',
         'phone' => '+91 91234 56789',
+        'age' => '29',
+        'blood_group' => 'O+',
         'service' => 'General & Preventative Care',
         'doctor' => 'Dr. Eddie Lake',
         'status' => 'New patients',
@@ -279,4 +287,20 @@ test('lead can be created with new patient statuses', function () {
 
     $response->assertCreated();
     expect(Lead::where('name', 'Priya Patel')->first()->status)->toBe('New patients');
+});
+
+test('lead creation enforces mandatory age and blood group fields', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->postJson(route('leads.store'), [
+        'name' => 'Meera Nair',
+        'phone' => '+91 98765 22222',
+        'service' => 'Dental Implants & Cosmetic',
+        'doctor' => 'Dr. Eddie Lake',
+        'status' => 'New patients',
+        'priority' => 'Medium',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['age', 'blood_group']);
 });

@@ -66,6 +66,8 @@ interface Props {
 const CORE_BUILTIN_FIELDS = [
     { name: "Patient Full Name", type: "Text", required: true },
     { name: "Phone Number", type: "Phone", required: true },
+    { name: "Age", type: "Text", required: true },
+    { name: "Blood Group", type: "Text", required: true },
     { name: "Clinical Service", type: "Dropdown", required: true },
     { name: "Assigned Doctor", type: "Dropdown", required: true },
     { name: "Email Address", type: "Email", required: false },
@@ -705,11 +707,11 @@ export default function LeadSettingsPage({ fields: initialFields }: Props) {
                                 </CardTitle>
                             </div>
                             <span className="text-[11px] text-muted-foreground">
-                                10 standard fields always active & required for clinical scheduling
+                                12 standard fields always active & required for clinical scheduling
                             </span>
                         </div>
                         <CardDescription className="text-[11px] text-muted-foreground mt-1">
-                            These 10 standard clinical intake fields are core dependencies and cannot be disabled or hidden.
+                            These 12 standard clinical intake fields are core dependencies and cannot be disabled or hidden.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="px-4 sm:px-5 pb-3.5 pt-0">

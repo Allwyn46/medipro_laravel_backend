@@ -69,6 +69,16 @@ class Lead extends Model
     }
 
     /**
+     * Get all prescriptions and diagnostic documents associated with this lead.
+     *
+     * @return HasMany<LeadDocument, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(LeadDocument::class)->latest();
+    }
+
+    /**
      * Accessor for camelCase createdAt expected by frontend components.
      */
     public function getCreatedAtAttribute(): ?string

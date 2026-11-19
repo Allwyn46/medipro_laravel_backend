@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\LeadDocumentController;
 use App\Http\Controllers\LeadFormFieldController;
 use App\Http\Controllers\PipelineController;
 use App\Models\Appointment;
@@ -60,6 +61,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/leads', [LeadController::class, 'store'])->name('leads.store');
     Route::patch('/api/leads/{id}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
     Route::post('/api/leads/{id}/notes', [LeadController::class, 'addNote'])->name('leads.add-note');
+
+    // LEAD PRESCRIPTION & DIAGNOSTIC DOCUMENTS
+    Route::post('/api/leads/{id}/documents', [LeadDocumentController::class, 'store'])->name('leads.documents.store');
+    Route::get('/api/leads/{id}/documents/{documentId}/stream', [LeadDocumentController::class, 'stream'])->name('leads.documents.stream');
+    Route::get('/api/leads/{id}/documents/{documentId}/download', [LeadDocumentController::class, 'download'])->name('leads.documents.download');
+    Route::post('/api/leads/{id}/documents/{documentId}/void', [LeadDocumentController::class, 'void'])->name('leads.documents.void');
 
     // ADMIN ONLY ROUTES
     Route::middleware('admin')->group(function () {

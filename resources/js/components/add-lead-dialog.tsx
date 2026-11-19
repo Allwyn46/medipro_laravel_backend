@@ -5,6 +5,8 @@ import {
     PhoneIcon,
     MailIcon,
     UserIcon,
+    CalendarIcon,
+    DropletIcon,
     StethoscopeIcon,
     IndianRupeeIcon,
     AlertCircleIcon,
@@ -107,6 +109,8 @@ export function AddLeadDialog({
 
     const [name, setName] = React.useState("");
     const [phone, setPhone] = React.useState("");
+    const [age, setAge] = React.useState("");
+    const [bloodGroup, setBloodGroup] = React.useState("");
     const [email, setEmail] = React.useState("");
     const [service, setService] = React.useState(CLINICAL_SERVICES[0].title);
     const [doctor, setDoctor] = React.useState(initialDoctor);
@@ -171,6 +175,8 @@ export function AddLeadDialog({
     const resetForm = () => {
         setName("");
         setPhone("");
+        setAge("");
+        setBloodGroup("");
         setEmail("");
         setService(CLINICAL_SERVICES[0].title);
         setDoctor(CLINICAL_SERVICES[0].doctor);
@@ -197,6 +203,16 @@ export function AddLeadDialog({
             return;
         }
 
+        if (!age.trim()) {
+            setError("Please enter the patient's age.");
+            return;
+        }
+
+        if (!bloodGroup.trim()) {
+            setError("Please enter the patient's blood group.");
+            return;
+        }
+
         // Validate required custom fields
         for (const field of activeFields) {
             if (field.is_required) {
@@ -216,6 +232,8 @@ export function AddLeadDialog({
             const payload = {
                 name: name.trim(),
                 phone: phone.trim(),
+                age: age.trim(),
+                blood_group: bloodGroup.trim(),
                 email: email.trim() || null,
                 service,
                 doctor,
@@ -330,6 +348,45 @@ export function AddLeadDialog({
                                         placeholder="e.g. +91 98765 43210"
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value)}
+                                        className="pl-8 text-xs h-8 bg-background"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Age and Blood Group */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="lead-age" className="text-xs font-medium">
+                                    Age <span className="text-destructive">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <CalendarIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                                    <Input
+                                        id="lead-age"
+                                        type="text"
+                                        required
+                                        placeholder="e.g. 32"
+                                        value={age}
+                                        onChange={(e) => setAge(e.target.value)}
+                                        className="pl-8 text-xs h-8 bg-background"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="lead-blood-group" className="text-xs font-medium">
+                                    Blood Group <span className="text-destructive">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <DropletIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                                    <Input
+                                        id="lead-blood-group"
+                                        type="text"
+                                        required
+                                        placeholder="e.g. O+, A+, B+, AB+"
+                                        value={bloodGroup}
+                                        onChange={(e) => setBloodGroup(e.target.value)}
                                         className="pl-8 text-xs h-8 bg-background"
                                     />
                                 </div>
@@ -498,7 +555,7 @@ export function AddLeadDialog({
                     {/* DYNAMIC CUSTOM FIELDS (Staff Configured) */}
                     {activeFields.length > 0 && (
                         <div className="rounded-lg border bg-secondary/15 p-3 flex flex-col gap-3">
-                            <div className="flex items-center justify-between">
+                            {/* <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                                     <SlidersHorizontalIcon className="size-3.5 text-primary" />
                                     Custom Clinical Details (Configured in Settings)
@@ -506,7 +563,7 @@ export function AddLeadDialog({
                                 <span className="text-[10px] text-muted-foreground">
                                     {activeFields.length} custom field{activeFields.length === 1 ? "" : "s"}
                                 </span>
-                            </div>
+                            </div> */}
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {activeFields.map((field) => (
@@ -516,7 +573,7 @@ export function AddLeadDialog({
                                             {field.is_required ? (
                                                 <span className="text-destructive">*</span>
                                             ) : (
-                                                <span className="text-[10px] text-muted-foreground">(Optional)</span>
+                                                <span className="text-[10px] text-muted-foreground"></span>
                                             )}
                                         </Label>
 
@@ -593,7 +650,7 @@ export function AddLeadDialog({
                         <Button
                             type="submit"
                             size="sm"
-                            disabled={isSubmitting || !name.trim() || !phone.trim()}
+                            disabled={isSubmitting || !name.trim() || !phone.trim() || !age.trim() || !bloodGroup.trim()}
                             className="bg-primary text-primary-foreground font-medium"
                         >
                             {isSubmitting ? "Creating Lead..." : "Create Patient Lead"}

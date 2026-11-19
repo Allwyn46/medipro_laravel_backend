@@ -1,53 +1,62 @@
-# Lead Intake Custom Field Kanban Management
+# Patient Lead Prescription & Diagnostic Documents Vault
 
 * **Author:** allwyn46
-* **Date:** 2026-11-16
+* **Date:** 2026-11-18
 
 ## Overview
 
-The Lead Form Settings page (`/settings/leads`) will provide an admin-restricted, two-column Kanban board (**Active** vs **Inactive**) dedicated solely to managing staff-created custom intake fields. All ten standard built-in lead fields (*Patient Full Name, Phone Number, Email Address, Clinical Service, Assigned Doctor, Pipeline Status, Priority Level, Total Estimated Value, Referral Source, and Clinical Notes*) are excluded from the board and remain permanent. 
+The patient lead details page (`/leads/{id}`) will introduce an authenticated medical document management vault designed for diagnostic reports and prescriptions. The feature introduces two synchronized UI sections:
+1. **Prescription & Diagnostic Upload Card:** Positioned on the left column directly above *Patient Clinical Notes*, featuring category classification (*X-Ray, Blood Test, MRI/CT Scan, Lab Report, Medication Prescription*) and file ingestion for PDF and image formats.
+2. **Prescriptions & Diagnostics Tab:** Positioned beside the *Activity & Consultation History* table in the right column, displaying uploaded documents in a responsive 3-column grid equipped with secure downloads and a clinical print preview window stamped with patient metadata (*Patient Name, Age, Blood Group, Doctor, Date*).
 
-Dragging a custom field card between the Active and Inactive columns triggers an immediate auto-save API call. This instantly updates field availability within the "Add New Patient Lead" modal while preserving historical intake data and labels on all existing patient records.
+All uploaded files are written to Laravel's private storage disk (`storage/app/private`) behind authorization-guarded streaming routes and automatically log an immutable audit milestone into the patient's activity history.
 
 ## Analysis
 
-### 1. Architectural & Data Integrity Findings
-* **Historical Label Resolution Bug**: In the current implementation of `LeadController::show()`, custom field metadata is loaded via `LeadFormField::active()->get()`. When an admin moves a field to "Inactive", historical leads containing values for that field lose their label mapping and fallback to raw snake_case database keys in the UI. To maintain historical readability, `LeadController::show()` must fetch all field definitions (`LeadFormField::all()`) regardless of active status.
-* **Storage Separation**: Built-in lead fields map directly to dedicated SQL columns on the `leads` table, whereas custom intake fields are stored as JSON key-value pairs within `leads.custom_fields`. Restricting the Kanban board exclusively to custom fields prevents structural schema mismatches and protects core clinical reporting metrics.
-* **Validation Behavior for Inactive Required Fields**: In `LeadController::store()`, backend validation rules are constructed dynamically from active fields. If a custom field is flagged as `is_required` but placed in the Inactive column, it will not block new lead submissions. Cards in the Inactive column will display a "Required when active" indicator so administrators understand the conditional requirement.
+### 1. Security & Private Disk Streaming Architecture
+* **Storage Isolation:** Diagnostic reports and prescriptions must reside exclusively within the local private disk (`storage/app/private/leads/{lead_id}/documents`) and never in public storage. No public symlinks will be created for medical assets.
+* **Access Control & Policy Enforcement:** Direct URLs to files are blocked. Document delivery routes (`GET /api/leads/{lead}/documents/{document}/stream` and `GET /api/leads/{lead}/documents/{document}/download`) are guarded by `LeadPolicy::view`, ensuring only assigned doctors or clinic administrators can view or download patient records.
+* **Protected HTTP Response Headers:** Responses emit strict caching headers (`Cache-Control: private, no-store, must-revalidate` and `X-Content-Type-Options: nosniff`) to prevent downstream proxy caching and MIME-type sniffing of Protected Health Information.
 
-### 2. Interaction & UX Ergonomics
-* **Immediate Auto-Save with Rollback**: When a card is dropped into a new column, the frontend applies an optimistic state update and dispatches an asynchronous `PATCH` request. If the network request fails, the UI reverts the card to its origin column and displays an error alert. A toast notification with an "Undo" trigger allows quick reversal of accidental moves without leaving the page.
-* **Accessibility & Pointer Fallback (WCAG 2.5.7)**: Relying solely on drag-and-drop gestures introduces friction on mobile devices and assistive hardware. Each field card includes a secondary one-click action button (e.g., "Move to Inactive" / "Move to Active") to allow status toggling without dragging.
-* **Component Reuse**: The application already includes `@dnd-kit/core` and `@dnd-kit/sortable` in `package.json`. The board will utilize these existing libraries rather than introducing third-party packages.
+### 2. Immutability vs. Clinical Misattribution
+* **The Immutability Paradox:** While clinical uploads must be immutable to preserve legal chain of custody, accidental file misattribution (e.g., uploading Patient B's lab results to Patient A's file) creates a severe privacy and medical risk if it cannot be corrected.
+* **Append-Only Soft-Voiding Pattern:** Rather than allowing physical deletions or file updates, documents are write-once. If a file is uploaded in error, an authorized clinical supervisor can execute a "Void" action. This action flags the document as voided, records the supervisor ID, timestamp, and justification, and registers a neutralizing audit entry in `lead_activities` without purging the raw storage binary.
+
+### 3. Print Execution & Patient Metadata Stamping
+* **Non-Destructive Presentation Stamping:** Altering radiological images or PDF binaries to permanently stamp text watermarks risks degrading image quality or obscuring diagnostic markers.
+* **CSS Print Composite:** Stamping is implemented via a clean clinic letterhead banner prepended during print execution (`@media print`). The preview modal renders `Patient Name`, `Age`, `Blood Group`, `Assigned Doctor`, and `Timestamp` above the embedded document view, leaving the original stored binary unaltered.
+
+### 4. Layout Ergonomics & Left Column Space
+* **Vertical Real Estate Preservation:** Adding an upload box above *Patient Clinical Notes* risks pushing clinical notes below the viewport fold. The upload card uses a compact dropzone layout with category pills and file drop that expands only when an active file is selected.
 
 ## Goals vs. Non-Goals
 
 ### In-Scope Goals
-* **Two-Column Kanban Interface**: Provide side-by-side Active and Inactive droppable drop zones on `/settings/leads`.
-* **Drag-and-Drop Interaction**: Support dragging cards between Active and Inactive columns using `@dnd-kit`.
-* **One-Click Fallback Controls**: Provide direct toggle buttons on cards for keyboard and touch ergonomics.
-* **Immediate Auto-Save Persistence**: Implement a backend route (`PATCH /api/settings/lead-fields/{id}/status`) to update `is_active` asynchronously.
-* **Intake Form Integration**: Ensure `AddLeadDialog` dynamically filters and renders only fields marked `is_active = true`.
-* **Historical Data Integrity**: Update `LeadController::show()` to pass all field definitions so deactivated fields remain readable on past records.
-* **Admin Authorization Enforcement**: Restrict settings modification endpoints to authenticated administrative accounts.
+* **Database Migration & Model:** Create `lead_documents` table capturing `lead_id`, `category`, `original_name`, `file_path`, `file_size`, `mime_type`, `uploaded_by`, and `status`.
+* **Private Storage Ingestion:** Store files securely in `storage/app/private/leads/{lead_id}/documents` with validation for PDF, JPEG, PNG, and WebP (up to 25MB).
+* **Authenticated Streaming & Download API:** Implement controller routes enforcing doctor/admin authorization for document streaming and download.
+* **Audit Trail Integration:** Automatically record an activity log entry in `lead_activities` upon file upload.
+* **Upload Card (Left Column):** Embed category selector and file dropzone directly above *Patient Clinical Notes*.
+* **Tabbed Right Panel:** Split the existing right column into tabs: "Activity History" and "Prescriptions & Diagnostics".
+* **3-Column Document Grid:** Display uploaded items in a responsive 3-per-row card grid with category badges, timestamps, and action buttons.
+* **Clinical Print Preview Modal:** Render document preview with a patient demographic header (*Name, Age, Blood Group, Doctor, Date*) and browser print integration.
+* **Automated Pest Feature Tests:** Test upload validation, authorization enforcement, streaming headers, and activity logging.
 
 ### Out-of-Scope Non-Goals
-* **Built-in Field Management**: Permitting toggling, reordering, or deactivating standard clinic intake fields (Name, Phone, Email, Service, Doctor, Status, Priority, Value, Source, Notes).
-* **Intra-Column Custom Sorting**: Reordering active fields within the column to change intake form layout sequence (ordering remains stable based on creation ID/timestamp).
-* **Destructive Data Purging**: Deleting past responses or altering existing `leads.custom_fields` records when a field is deactivated.
-* **Non-Admin Configuration**: Granting doctor or standard staff roles permission to toggle intake field availability.
+* **DICOM Medical PACS Viewer:** Files are ingested and viewed as standard PDFs or raster images, not raw DICOM binaries.
+* **OCR Text Extraction:** Automated parsing of lab test values into database fields is excluded.
+* **Public Patient Portal Links:** Uploads are accessible strictly within the internal authenticated clinic portal.
+* **Regulatory Digital Signature Workflows:** Cryptographic PKI digital signing of prescriptions is deferred.
 
 ## Alternatives Weighed
 
-* **Tabular Toggle Switches**: Rejected by author. A standard list with toggle switches was considered, but the author specifically mandated a spatial two-column Kanban table for visual segregation.
-* **Including Standard Built-in Fields on Board**: Rejected by author. Managing core fields on the board was evaluated, but the author confirmed all standard clinical fields must be completely excluded from the board.
-* **Explicit Save Changes Button (Staged Mutation)**: Rejected by author. Staging changes locally until a manual "Save" button is clicked was considered, but auto-save on card drop was selected for operational efficiency.
-* **Custom Intake Form Drag-to-Order**: Rejected by author. Enabling vertical drag sorting to dictate exact input order was evaluated, but the author confirmed no ordering requirement is needed.
+* **Public Storage (`storage/app/public`) with Symlink:** Rejected by author. Public URLs expose sensitive patient health data without authentication checks.
+* **Binary Image Stamping via GD/ImageMagick:** Rejected by author. Modifying image pixels directly can distort clinical diagnostics. Switched to CSS `@media print` composite letterhead stamping.
+* **Dedicated Separate Page for Prescriptions (`/leads/{id}/prescriptions`):** Rejected by author. Clinic staff need to view notes, consultation history, and prescriptions simultaneously in a unified patient profile.
 
 ## Key Decisions & Staging for Next Steps
 
-* **Dependency Reuse**: Utilize existing `@dnd-kit` packages without adding new dependencies.
-* **Dedicated Status Endpoint**: Create `PATCH /api/settings/lead-fields/{id}/status` accepting `{"is_active": boolean}`.
-* **Historical Label Fix**: Update `LeadController::show()` to use `LeadFormField::all()` to prevent slug fallback bugs on past leads.
-* **Next Step**: Proceed to formal design specification with `/egm-draft` or refine the brief based on human feedback.
+* **Storage Path:** `storage/app/private/leads/{lead_id}/documents/`.
+* **Category Presets:** X-Ray, Blood Test, MRI/CT Scan, Lab Report, Medication Prescription.
+* **Immutability Policy:** Write-once ingestion with append-only voiding for clinical safety.
+* **Next Step:** User review and transition to `/egm-draft` or direct implementation staging.

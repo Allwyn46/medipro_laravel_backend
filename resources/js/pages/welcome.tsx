@@ -663,7 +663,7 @@ export default function Welcome({
                                 </p>
 
                                 {/* Trust Metrics Bar */}
-                                <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-800/80 max-w-lg">
+                                {/* <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-800/80 max-w-lg">
                                     <div>
                                         <div className="text-2xl font-black text-white tabular-nums">
                                             4.9/5
@@ -689,7 +689,7 @@ export default function Welcome({
                                             Wait Guarantee
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
 
                                 {/* HERO CLINIC IMAGERY SHOWCASE */}
                                 <div className="pt-2">
@@ -968,7 +968,7 @@ export default function Welcome({
                                                         id="phone"
                                                         type="tel"
                                                         required
-                                                        placeholder="+1 (555) 000-0000"
+                                                        placeholder="+91 1234567890"
                                                         value={
                                                             bookingData.phone
                                                         }

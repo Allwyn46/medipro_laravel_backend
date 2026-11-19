@@ -42,11 +42,41 @@ export interface LeadFormField {
     updated_at?: string;
 }
 
+export interface LeadDocument {
+    id: number;
+    lead_id: number;
+    category: string;
+    title?: string;
+    original_name: string;
+    file_name: string;
+    file_path: string;
+    file_size: number;
+    mime_type: string;
+    uploaded_by?: number;
+    uploader?: {
+        id: number;
+        name: string;
+    };
+    status: 'active' | 'voided';
+    voided_reason?: string;
+    voided_at?: string;
+    formattedSize: string;
+    isImage: boolean;
+    isPdf: boolean;
+    streamUrl: string;
+    downloadUrl: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Lead {
     id: number;
     name: string;
     email: string;
     phone: string;
+    age?: string;
+    blood_group?: string;
+    bloodGroup?: string;
     service: string;
     status: LeadStatus;
     priority: LeadPriority;
@@ -60,4 +90,5 @@ export interface Lead {
     notes?: string;
     custom_fields?: Record<string, any>;
     activities: LeadActivity[];
+    documents?: LeadDocument[];
 }

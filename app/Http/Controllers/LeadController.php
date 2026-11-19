@@ -32,7 +32,7 @@ class LeadController extends Controller
     public function show(int $id): Response
     {
         $allLeads = self::getLeads();
-        $lead = Lead::with('activities')->find($id);
+        $lead = Lead::with(['activities', 'documents.uploader'])->find($id);
 
         if (! $lead) {
             abort(404, 'Lead not found');
@@ -46,6 +46,7 @@ class LeadController extends Controller
             'lead' => $lead,
             'allLeads' => $allLeads,
             'customFields' => LeadFormField::all(),
+            'documents' => $lead->documents,
         ]);
     }
 
@@ -67,6 +68,8 @@ class LeadController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
+            'age' => ['required', 'string', 'max:20'],
+            'blood_group' => ['required', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'service' => ['required', 'string', 'max:255'],
             'doctor' => ['required', 'string', 'max:255'],
@@ -110,6 +113,8 @@ class LeadController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'] ?? '',
             'phone' => $validated['phone'],
+            'age' => $validated['age'],
+            'blood_group' => $validated['blood_group'],
             'service' => $validated['service'],
             'doctor' => $validated['doctor'],
             'doctor_id' => $doctorId,

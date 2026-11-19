@@ -72,7 +72,12 @@ import {
 } from "@/components/ui/table";
 import { AddLeadDialog } from "@/components/add-lead-dialog";
 import Layout from "../layout/Layout";
-import type { Lead, LeadFormField, LeadPriority, LeadStatus } from "@/types/lead";
+import type {
+    Lead,
+    LeadFormField,
+    LeadPriority,
+    LeadStatus,
+} from "@/types/lead";
 
 const features = tableFeatures({
     columnFilteringFeature,
@@ -266,11 +271,7 @@ const columns = columnHelper.columns([
                     </Badge>
                 );
             }
-            return (
-                <div className="text-xs text-muted-foreground">
-                    {doc}
-                </div>
-            );
+            return <div className="text-xs text-muted-foreground">{doc}</div>;
         },
     }),
     columnHelper.accessor("createdAt", {
@@ -360,7 +361,9 @@ export default function LeadsPage({
     const totalLeads = data.length;
     const totalPipelineValue = data.reduce((acc, lead) => acc + lead.value, 0);
     const scheduledCount = data.filter(
-        (l) => l.status === "Consultation Scheduled" || l.status === "Consultation Booked",
+        (l) =>
+            l.status === "Consultation Scheduled" ||
+            l.status === "Consultation Booked",
     ).length;
     const wonCount = data.filter(
         (l) =>
@@ -375,23 +378,56 @@ export default function LeadsPage({
 
         if (statusFilter !== "ALL") {
             result = result.filter((lead) => {
-                if (statusFilter === "New patients" || statusFilter === "New Patients") {
-                    return lead.status === "New patients" || lead.status === "New Patients" || lead.status === "New";
+                if (
+                    statusFilter === "New patients" ||
+                    statusFilter === "New Patients"
+                ) {
+                    return (
+                        lead.status === "New patients" ||
+                        lead.status === "New Patients" ||
+                        lead.status === "New"
+                    );
                 }
-                if (statusFilter === "Contacted patients" || statusFilter === "Contacted Patients") {
-                    return lead.status === "Contacted patients" || lead.status === "Contacted Patients" || lead.status === "Contacted";
+                if (
+                    statusFilter === "Contacted patients" ||
+                    statusFilter === "Contacted Patients"
+                ) {
+                    return (
+                        lead.status === "Contacted patients" ||
+                        lead.status === "Contacted Patients" ||
+                        lead.status === "Contacted"
+                    );
                 }
                 if (statusFilter === "Consultation Scheduled") {
-                    return lead.status === "Consultation Scheduled" || lead.status === "Consultation Booked";
+                    return (
+                        lead.status === "Consultation Scheduled" ||
+                        lead.status === "Consultation Booked"
+                    );
                 }
-                if (statusFilter === "Follow up patients" || statusFilter === "Follow-up Patients") {
-                    return lead.status === "Follow up patients" || lead.status === "Follow-up Patients" || lead.status === "Treatment Plan Sent";
+                if (
+                    statusFilter === "Follow up patients" ||
+                    statusFilter === "Follow-up Patients"
+                ) {
+                    return (
+                        lead.status === "Follow up patients" ||
+                        lead.status === "Follow-up Patients" ||
+                        lead.status === "Treatment Plan Sent"
+                    );
                 }
-                if (statusFilter === "Confirmed patients" || statusFilter === "Confirmed Patients") {
-                    return lead.status === "Confirmed patients" || lead.status === "Confirmed Patients" || lead.status === "Won";
+                if (
+                    statusFilter === "Confirmed patients" ||
+                    statusFilter === "Confirmed Patients"
+                ) {
+                    return (
+                        lead.status === "Confirmed patients" ||
+                        lead.status === "Confirmed Patients" ||
+                        lead.status === "Won"
+                    );
                 }
                 if (statusFilter === "Reschedule") {
-                    return lead.status === "Reschedule" || lead.status === "Lost";
+                    return (
+                        lead.status === "Reschedule" || lead.status === "Lost"
+                    );
                 }
                 return lead.status === statusFilter;
             });
@@ -476,11 +512,11 @@ export default function LeadsPage({
                 <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-4xl font-medium font-sans tracking-tight text-foreground lg:text-4xl">
-                            Leads Management
+                            Patients Management
                         </h1>
                         <p className="mt-1 text-sm font-sans tracking-tight text-muted-foreground">
                             Manage patient inquiries, consultation bookings, and
-                            clinic treatment leads.
+                            clinic treatment patients.
                         </p>
                     </div>
                     <div className="flex items-center gap-2 mt-4 md:mt-0">
@@ -495,7 +531,7 @@ export default function LeadsPage({
                             className="bg-primary text-primary-foreground cursor-pointer"
                         >
                             <PlusIcon className="size-4" />
-                            <span>Add New Lead</span>
+                            <span>Add New Patient</span>
                         </Button>
                     </div>
                 </div>
